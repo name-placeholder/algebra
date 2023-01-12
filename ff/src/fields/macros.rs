@@ -100,7 +100,7 @@ macro_rules! impl_Fp {
             Hash(bound = ""),
             Clone(bound = ""),
             Copy(bound = ""),
-            Debug(bound = ""),
+            // Debug(bound = ""),
             PartialEq(bound = ""),
             Eq(bound = "")
         )]
@@ -110,6 +110,17 @@ macro_rules! impl_Fp {
             #[doc(hidden)]
             pub PhantomData<P>,
         );
+
+        impl<P: $FpParameters> ark_std::fmt::Debug for $Fp<P> {
+            fn fmt(&self, f: &mut ark_std::fmt::Formatter<'_>) -> ark_std::fmt::Result {
+                use crate::ark_std::string::ToString;
+
+                let r = self.into_repr();
+                let bigint: num_bigint::BigUint = r.into();
+                let s = bigint.to_string();
+                f.write_fmt(format_args!("{:?}", s))
+            }
+        }
 
         impl<P> $Fp<P> {
             #[inline]
