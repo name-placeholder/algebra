@@ -118,7 +118,15 @@ macro_rules! impl_Fp {
                 let r = self.into_repr();
                 let bigint: num_bigint::BigUint = r.into();
                 let s = bigint.to_string();
-                f.write_fmt(format_args!("{:?}", s))
+
+                // Hacky way to find which of `Fp` or `Fq` it is
+                let name = match P::INV {
+                    11037532056220336127 => "Fp",
+                    10108024940646105087 => "Fq",
+                    _ => "Field",
+                };
+
+                f.write_fmt(format_args!("{}({})", name, s))
             }
         }
 
