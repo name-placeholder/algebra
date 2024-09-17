@@ -339,7 +339,7 @@ pub fn fft_field_test<F: FftField>() {
 pub fn primefield_test<F: PrimeField>() {
     from_str_test::<F>();
     let one = F::one();
-    assert_eq!(F::from(one.into_repr()), one);
+    assert_eq!(F::try_from(one.into_repr()).map_err(|_| ()).unwrap(), one);
 
     fft_field_test::<F>();
 }

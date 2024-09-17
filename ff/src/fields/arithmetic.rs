@@ -171,6 +171,23 @@ macro_rules! impl_field_square_in_place {
     };
 }
 
+#[derive(Clone, Debug)]
+pub struct InvalidBigInt;
+
+impl core::fmt::Display for InvalidBigInt {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("InvalidBigInt")
+    }
+}
+
+impl From<InvalidBigInt> for ark_std::string::String {
+    fn from(_: InvalidBigInt) -> Self {
+        format!("InvalidBigInt")
+    }
+}
+
+impl ark_std::error::Error for InvalidBigInt {}
+
 macro_rules! impl_field_bigint_conv {
     ($field: ident, $bigint: ident, $params: ident) => {
         impl<P: $params> Into<$bigint> for $field<P> {
@@ -179,13 +196,14 @@ macro_rules! impl_field_bigint_conv {
             }
         }
 
-        impl<P: $params> From<$bigint> for $field<P> {
+        impl<P: $params> core::convert::TryFrom<$bigint> for $field<P> {
+            type Error = $crate::fields::arithmetic::InvalidBigInt;
+
             /// Converts `Self::BigInteger` into `Self`
             ///
-            /// # Panics
-            /// This method panics if `int` is larger than `P::MODULUS`.
-            fn from(int: $bigint) -> Self {
-                Self::from_repr(int).unwrap()
+            /// This method returns an error if `int` is larger than `P::MODULUS`.
+            fn try_from(int: $bigint) -> Result<Self, Self::Error> {
+                Self::from_repr(int).ok_or($crate::fields::arithmetic::InvalidBigInt)
             }
         }
     };

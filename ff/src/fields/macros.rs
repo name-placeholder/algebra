@@ -594,7 +594,8 @@ macro_rules! impl_Fp {
 
                 let mut res = Self::zero();
 
-                let ten = Self::from(<Self as PrimeField>::BigInt::from(10));
+                use core::convert::TryFrom;
+                let ten = Self::try_from(<Self as PrimeField>::BigInt::from(10)).unwrap(); // never fail
 
                 let mut first_digit = true;
 
