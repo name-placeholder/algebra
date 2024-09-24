@@ -191,7 +191,7 @@ macro_rules! impl_Fp {
                 for i in 0..$limbs {
                     let mut carry = 0;
                     for j in 0..$limbs {
-                        r[j + i] = mac_with_carry!(r[j + i], (self.0).0[i], (other.0).0[j], &mut carry);
+                        r[j + i] = const_mac_with_carry!(r[j + i], (self.0).0[i], (other.0).0[j], &mut carry);
                     }
                     r[$limbs + i] = carry;
                 }
@@ -200,9 +200,9 @@ macro_rules! impl_Fp {
                 for i in 0..$limbs {
                     let k = r[i].wrapping_mul(inv);
                     let mut carry = 0;
-                    mac_with_carry!(r[i], k, modulus.0[0], &mut carry);
+                    const_mac_with_carry!(r[i], k, modulus.0[0], &mut carry);
                     for j in 1..$limbs {
-                        r[j + i] = mac_with_carry!(r[j + i], k, modulus.0[j], &mut carry);
+                        r[j + i] = const_mac_with_carry!(r[j + i], k, modulus.0[j], &mut carry);
                     }
                     r[$limbs + i] = adc!(r[$limbs + i], _carry2, &mut carry);
                     _carry2 = carry;

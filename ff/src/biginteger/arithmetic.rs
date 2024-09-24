@@ -1,5 +1,30 @@
 use ark_std::vec::Vec;
 
+/// Make 4 u64 multiplications, instead of 1 u128
+/// It's faster than __multi3 in wasm
+/// https://github.com/rust-lang/compiler-builtins/blob/4797774cd72e453e30785cfee684aaf68e16e03e/src/int/mul.rs#L108
+/// https://github.com/zkBob/fawkes-crypto/pull/15
+#[cfg(target_family = "wasm")]
+#[inline(always)]
+pub fn u64_mul_u64(x: u64, y: u64) -> u128 {
+    let x_low = (x as u32) as u64;
+    let x_high = x >> 32;
+    let y_low = (y as u32) as u64;
+    let y_high = y >> 32;
+
+    let z_low = x_low * y_low;
+    let z_high = x_high * y_high;
+    let z = u128::from(x_low * y_high) + u128::from(x_high * y_low);
+
+    (u128::from(z_high) << 64) + (z << 32) + u128::from(z_low)
+}
+
+#[cfg(not(target_family = "wasm"))]
+#[inline(always)]
+pub fn u64_mul_u64(x: u64, y: u64) -> u128 {
+    u128::from(x) * u128::from(y)
+}
+
 /// Calculate a + b + carry, returning the sum and modifying the
 /// carry value.
 macro_rules! adc {
@@ -15,6 +40,19 @@ macro_rules! adc {
 /// Calculate a + (b * c) + carry, returning the least significant digit
 /// and setting carry to the most significant digit.
 macro_rules! mac_with_carry {
+    ($a:expr, $b:expr, $c:expr, &mut $carry:expr$(,)?) => {{
+        let tmp = ($a as u128) + crate::biginteger::arithmetic::u64_mul_u64($b, $c) + ($carry as u128);
+        // let tmp = ($a as u128) + ($b as u128 * $c as u128) + ($carry as u128);
+
+        $carry = (tmp >> 64) as u64;
+
+        tmp as u64
+    }};
+}
+
+/// Calculate a + (b * c) + carry, returning the least significant digit
+/// and setting carry to the most significant digit.
+macro_rules! const_mac_with_carry {
     ($a:expr, $b:expr, $c:expr, &mut $carry:expr$(,)?) => {{
         let tmp = ($a as u128) + ($b as u128 * $c as u128) + ($carry as u128);
 
@@ -38,7 +76,8 @@ macro_rules! sbb {
 
 #[inline(always)]
 pub(crate) fn mac(a: u64, b: u64, c: u64, carry: &mut u64) -> u64 {
-    let tmp = (u128::from(a)) + u128::from(b) * u128::from(c);
+    let tmp = (u128::from(a)) + u64_mul_u64(b, c);
+    // let tmp = (u128::from(a)) + u128::from(b) * u128::from(c);
 
     *carry = (tmp >> 64) as u64;
 
@@ -47,7 +86,8 @@ pub(crate) fn mac(a: u64, b: u64, c: u64, carry: &mut u64) -> u64 {
 
 #[inline(always)]
 pub(crate) fn mac_discard(a: u64, b: u64, c: u64, carry: &mut u64) {
-    let tmp = (u128::from(a)) + u128::from(b) * u128::from(c);
+    let tmp = (u128::from(a)) + u64_mul_u64(b, c);
+    // let tmp = (u128::from(a)) + u128::from(b) * u128::from(c);
 
     *carry = (tmp >> 64) as u64;
 }
