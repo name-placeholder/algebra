@@ -470,20 +470,17 @@ pub struct BitIteratorBE<Slice: AsRef<[u64]>> {
     s: Slice,
     n: usize,
 }
-
 impl<Slice: AsRef<[u64]>> BitIteratorBE<Slice> {
     pub fn new(s: Slice) -> Self {
         let n = s.as_ref().len() * 64;
         BitIteratorBE { s, n }
     }
-
     /// Construct an iterator that automatically skips any leading zeros.
     /// That is, it skips all zeros before the most-significant one.
     pub fn without_leading_zeros(s: Slice) -> impl Iterator<Item = bool> {
         Self::new(s).skip_while(|b| !b)
     }
 }
-
 impl<Slice: AsRef<[u64]>> Iterator for BitIteratorBE<Slice> {
     type Item = bool;
 
@@ -494,6 +491,38 @@ impl<Slice: AsRef<[u64]>> Iterator for BitIteratorBE<Slice> {
             self.n -= 1;
             let part = self.n / 64;
             let bit = self.n - (64 * part);
+
+            Some(self.s.as_ref()[part] & (1 << bit) > 0)
+        }
+    }
+}
+
+/// Iterates over a slice of `u32` in *big-endian* order.
+#[derive(Debug)]
+pub struct BitIteratorBE32<Slice: AsRef<[u32]>> {
+    s: Slice,
+    n: usize,
+}
+impl<Slice: AsRef<[u32]>> BitIteratorBE32<Slice> {
+    pub fn new(s: Slice) -> Self {
+        let n = s.as_ref().len() * 32;
+        BitIteratorBE32 { s, n }
+    }
+    /// Construct an iterator that automatically skips any leading zeros.
+    /// That is, it skips all zeros before the most-significant one.
+    pub fn without_leading_zeros(s: Slice) -> impl Iterator<Item = bool> {
+        Self::new(s).skip_while(|b| !b)
+    }
+}
+impl<Slice: AsRef<[u32]>> Iterator for BitIteratorBE32<Slice> {
+    type Item = bool;
+    fn next(&mut self) -> Option<bool> {
+        if self.n == 0 {
+            None
+        } else {
+            self.n -= 1;
+            let part = self.n / 32;
+            let bit = self.n - (32 * part);
 
             Some(self.s.as_ref()[part] & (1 << bit) > 0)
         }
@@ -547,19 +576,16 @@ impl<Slice: AsRef<[u64]>> Iterator for BitIteratorLE<Slice> {
     }
 }
 
-use crate::biginteger::{
-    BigInteger256, BigInteger320, BigInteger384, BigInteger448, BigInteger64, BigInteger768,
-    BigInteger832,
-};
+use crate::biginteger::BigInteger256;
 use num_bigint::BigUint;
 
-impl_field_bigint_conv!(Fp64, BigInteger64, Fp64Parameters);
-impl_field_bigint_conv!(Fp256, BigInteger256, Fp256Parameters);
-impl_field_bigint_conv!(Fp320, BigInteger320, Fp320Parameters);
-impl_field_bigint_conv!(Fp384, BigInteger384, Fp384Parameters);
-impl_field_bigint_conv!(Fp448, BigInteger448, Fp448Parameters);
-impl_field_bigint_conv!(Fp768, BigInteger768, Fp768Parameters);
-impl_field_bigint_conv!(Fp832, BigInteger832, Fp832Parameters);
+// impl_field_bigint_conv!(Fp64, BigInteger64, Fp64Parameters);
+// impl_field_bigint_conv!(Fp256, BigInteger256, Fp256Parameters);
+// impl_field_bigint_conv!(Fp320, BigInteger320, Fp320Parameters);
+// impl_field_bigint_conv!(Fp384, BigInteger384, Fp384Parameters);
+// impl_field_bigint_conv!(Fp448, BigInteger448, Fp448Parameters);
+// impl_field_bigint_conv!(Fp768, BigInteger768, Fp768Parameters);
+// impl_field_bigint_conv!(Fp832, BigInteger832, Fp832Parameters);
 
 // Given a vector of field elements {v_i}, compute the vector {v_i^(-1)}
 pub fn batch_inversion<F: Field>(v: &mut [F]) {

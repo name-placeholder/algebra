@@ -138,7 +138,7 @@ impl<P: Parameters> AffineCurve for GroupAffine<P> {
     }
 
     fn mul<S: Into<<Self::ScalarField as PrimeField>::BigInt>>(&self, by: S) -> GroupProjective<P> {
-        self.mul_bits(BitIteratorBE::new(by.into()))
+        self.mul_bits(ark_ff::BitIteratorBE32::new(by.into()))
     }
 
     fn from_random_bytes(bytes: &[u8]) -> Option<Self> {
