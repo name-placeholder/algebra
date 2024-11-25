@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 macro_rules! impl_prime_field_serializer {
     ($field: ident, $params: ident, $byte_size: expr) => {
         impl<P: $params> CanonicalSerializeWithFlags for $field<P> {
@@ -324,8 +326,8 @@ macro_rules! impl_Fp {
             }
 
             #[inline]
-            fn characteristic() -> &'static [u64] {
-                P::MODULUS.as_ref()
+            fn characteristic() -> [u64; 4] {
+                P::MODULUS.0
             }
 
             #[inline]
