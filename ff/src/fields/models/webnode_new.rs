@@ -61,7 +61,7 @@ impl FieldConstants for FpConstant {
 pub struct FqConstant;
 impl FieldConstants for FqConstant {
     const U32_MODULUS: [u32; 9] = [
-        0x1, 0x9698768, 0x133e46e6, 0xd31f812, 0x224, 0x0, 0x0, 0x0, 0x400000,
+        0x1, 0x2375908, 0x52a3763, 0xd31f813, 0x224, 0x0, 0x0, 0x0, 0x400000,
     ];
     const U64_MODULUS: [u64; 9] = {
         let mut modulus64 = [0u64; 9];
@@ -74,12 +74,12 @@ impl FieldConstants for FqConstant {
         modulus64
     };
     const U32_R: [u32; 9] = [
-        0x1fffff81, 0x14a5d367, 0x141ad3c0, 0x1435eec5, 0x1ffeefef, 0x1fffffff, 0x1fffffff,
+        0x1fffff81, 0x68ad507, 0x100e85da, 0x1435ee7e, 0x1ffeefef, 0x1fffffff, 0x1fffffff,
         0x1fffffff, 0x3fffff,
     ];
     const U32_R2: [u32; 9] = [
-        0x3b6a, 0x19c10910, 0x1a6a0188, 0x12a4fd88, 0x634b36d, 0x178792ba, 0x7797a99, 0x1dce5b8a,
-        0x3506bd,
+        0x3b6a, 0x2b1b550, 0x1027888a, 0x1ea4ed96, 0x418ad7a, 0x999eb, 0x17fae231,
+        0x1e67ed54, 0x3506bd,
     ];
     // const U32_MINV: u64 = 0x1fffffff;
     const U64_MINV: u64 = 0x1fffffff;
