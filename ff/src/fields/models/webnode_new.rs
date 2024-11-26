@@ -15,12 +15,84 @@ use ark_std::{
     str::FromStr, One, Zero,
 };
 
-impl Into<BigInteger256> for NewFp256 {
+pub trait FieldConstants: ark_std::fmt::Debug + Clone + Copy + Default + Eq + PartialEq + PartialOrd + Ord + core::hash::Hash + 'static + Send + Sync + Sized
+// trait FieldConstants: #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
+ {
+    const U32_MODULUS: [u32; 9];
+    const U64_MODULUS: [u64; 9];
+    const U32_R: [u32; 9];
+    const U32_R2: [u32; 9];
+    const U64_MINV: u64;
+    const U32_MINV: u32;
+    const REPR_SHAVE_BITS: u32;
+}
+
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
+pub struct FpConstant;
+impl FieldConstants for FpConstant {
+    const U32_MODULUS: [u32; 9] = [
+        0x1, 0x9698768, 0x133e46e6, 0xd31f812, 0x224, 0x0, 0x0, 0x0, 0x400000,
+    ];
+    const U64_MODULUS: [u64; 9] = {
+        let mut modulus64 = [0u64; 9];
+        let modulus = Self::U32_MODULUS;
+        let mut i = 0;
+        while i < 9 {
+            modulus64[i] = modulus[i] as u64;
+            i += 1;
+        }
+        modulus64
+    };
+    const U32_R: [u32; 9] = [
+        0x1fffff81, 0x14a5d367, 0x141ad3c0, 0x1435eec5, 0x1ffeefef, 0x1fffffff, 0x1fffffff,
+        0x1fffffff, 0x3fffff,
+    ];
+    const U32_R2: [u32; 9] = [
+        0x3b6a, 0x19c10910, 0x1a6a0188, 0x12a4fd88, 0x634b36d, 0x178792ba, 0x7797a99, 0x1dce5b8a,
+        0x3506bd,
+    ];
+    // const U32_MINV: u64 = 0x1fffffff;
+    const U64_MINV: u64 = 0x1fffffff;
+    const U32_MINV: u32 = 0x1fffffff;
+    const REPR_SHAVE_BITS: u32 = 1;
+}
+
+#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
+pub struct FqConstant;
+impl FieldConstants for FqConstant {
+    const U32_MODULUS: [u32; 9] = [
+        0x1, 0x9698768, 0x133e46e6, 0xd31f812, 0x224, 0x0, 0x0, 0x0, 0x400000,
+    ];
+    const U64_MODULUS: [u64; 9] = {
+        let mut modulus64 = [0u64; 9];
+        let modulus = Self::U32_MODULUS;
+        let mut i = 0;
+        while i < 9 {
+            modulus64[i] = modulus[i] as u64;
+            i += 1;
+        }
+        modulus64
+    };
+    const U32_R: [u32; 9] = [
+        0x1fffff81, 0x14a5d367, 0x141ad3c0, 0x1435eec5, 0x1ffeefef, 0x1fffffff, 0x1fffffff,
+        0x1fffffff, 0x3fffff,
+    ];
+    const U32_R2: [u32; 9] = [
+        0x3b6a, 0x19c10910, 0x1a6a0188, 0x12a4fd88, 0x634b36d, 0x178792ba, 0x7797a99, 0x1dce5b8a,
+        0x3506bd,
+    ];
+    // const U32_MINV: u64 = 0x1fffffff;
+    const U64_MINV: u64 = 0x1fffffff;
+    const U32_MINV: u32 = 0x1fffffff;
+    const REPR_SHAVE_BITS: u32 = 1;
+}
+
+impl<C: FieldConstants> Into<BigInteger256> for NewFp256<C> {
     fn into(self) -> BigInteger256 {
         self.into_repr()
     }
 }
-impl core::convert::TryFrom<BigInteger256> for NewFp256 {
+impl<C: FieldConstants> core::convert::TryFrom<BigInteger256> for NewFp256<C> {
     type Error = crate::fields::arithmetic::InvalidBigInt;
 
     /// Converts `Self::BigInteger` into `Self`
@@ -67,45 +139,45 @@ pub const fn to_64x4(pa: [u32; 9]) -> [u64; 4] {
     p
 }
 
-const U32_MODULUS: [u32; 9] = [
-    0x1, 0x9698768, 0x133e46e6, 0xd31f812, 0x224, 0x0, 0x0, 0x0, 0x400000,
-];
-const U64_MODULUS: [u64; 9] = {
-    let mut modulus64 = [0u64; 9];
-    let modulus = U32_MODULUS;
-    let mut i = 0;
-    while i < 9 {
-        modulus64[i] = modulus[i] as u64;
-        i += 1;
-    }
-    modulus64
-};
-const U32_R: [u32; 9] = [
-    0x1fffff81, 0x14a5d367, 0x141ad3c0, 0x1435eec5, 0x1ffeefef, 0x1fffffff, 0x1fffffff,
-    0x1fffffff, 0x3fffff,
-];
-const U32_R2: [u32; 9] = [
-    0x3b6a, 0x19c10910, 0x1a6a0188, 0x12a4fd88, 0x634b36d, 0x178792ba, 0x7797a99, 0x1dce5b8a,
-    0x3506bd,
-];
-// const U32_MINV: u64 = 0x1fffffff;
-const U64_MINV: u64 = 0x1fffffff;
-const U32_MINV: u32 = 0x1fffffff;
+// const U32_MODULUS: [u32; 9] = [
+//     0x1, 0x9698768, 0x133e46e6, 0xd31f812, 0x224, 0x0, 0x0, 0x0, 0x400000,
+// ];
+// const U64_MODULUS: [u64; 9] = {
+//     let mut modulus64 = [0u64; 9];
+//     let modulus = U32_MODULUS;
+//     let mut i = 0;
+//     while i < 9 {
+//         modulus64[i] = modulus[i] as u64;
+//         i += 1;
+//     }
+//     modulus64
+// };
+// const U32_R: [u32; 9] = [
+//     0x1fffff81, 0x14a5d367, 0x141ad3c0, 0x1435eec5, 0x1ffeefef, 0x1fffffff, 0x1fffffff,
+//     0x1fffffff, 0x3fffff,
+// ];
+// const U32_R2: [u32; 9] = [
+//     0x3b6a, 0x19c10910, 0x1a6a0188, 0x12a4fd88, 0x634b36d, 0x178792ba, 0x7797a99, 0x1dce5b8a,
+//     0x3506bd,
+// ];
+// // const U32_MINV: u64 = 0x1fffffff;
+// const U64_MINV: u64 = 0x1fffffff;
+// const U32_MINV: u32 = 0x1fffffff;
 
-const REPR_SHAVE_BITS: u32 = 1;
+// const REPR_SHAVE_BITS: u32 = 1;
 
 // #[inline]
-const fn gte_modulus(x: &Inner) -> bool {
+const fn gte_modulus<C: FieldConstants>(x: &Inner) -> bool {
     // dbg!(x, U32_MODULUS);
-    let mut i = NewFp256::NLIMBS - 1;
+    let mut i = NewFp256::<C>::NLIMBS - 1;
     loop {
     // for i in (0..9).rev() {
         // eprintln!("gte_modulus2={:?} x[i]={:?} U32_MODULUS[i]={:?}", i, x[i], U32_MODULUS[i]);
         // don't fix warning -- that makes it 15% slower!
         #[allow(clippy::comparison_chain)]
-        if x.0[i] > U32_MODULUS[i] {
+        if x.0[i] > C::U32_MODULUS[i] {
             return true;
-        } else if x.0[i] < U32_MODULUS[i] {
+        } else if x.0[i] < C::U32_MODULUS[i] {
             return false;
         }
         i -= 1;
@@ -116,22 +188,22 @@ const fn gte_modulus(x: &Inner) -> bool {
     true
 }
 
-const fn conditional_reduce(x: &mut Inner) {
-    if gte_modulus(x) {
+const fn conditional_reduce<C: FieldConstants>(x: &mut Inner) {
+    if gte_modulus::<C>(x) {
         let mut i = 0;
         while i < 9 {
         // for i in 0..9 {
-            x.0[i] = x.0[i].wrapping_sub(U32_MODULUS[i]);
+            x.0[i] = x.0[i].wrapping_sub(C::U32_MODULUS[i]);
             i += 1;
         }
-        let mut i = 0;
+        let mut i = 1;
         while i < 9 {
         // for i in 1..9 {
             x.0[i] += ((x.0[i - 1] as i32) >> SHIFT) as u32;
             i += 1;
         }
         let mut i = 0;
-        while i < 9 {
+        while i < 8 {
         // for i in 0..8 {
             x.0[i] &= MASK;
             i += 1;
@@ -139,7 +211,7 @@ const fn conditional_reduce(x: &mut Inner) {
     }
 }
 
-fn add_assign(x: &mut Inner, y: &Inner) {
+fn add_assign<C: FieldConstants>(x: &mut Inner, y: &Inner) {
     // let x = &mut x.0;
     let y = &y.0;
     let mut tmp: u32;
@@ -151,11 +223,11 @@ fn add_assign(x: &mut Inner, y: &Inner) {
         x.0[i] = tmp & MASK;
     }
 
-    if gte_modulus(x) {
+    if gte_modulus::<C>(x) {
         carry = 0;
         #[allow(clippy::needless_range_loop)]
         for i in 0..9 {
-            tmp = x.0[i].wrapping_sub(U32_MODULUS[i]) + (carry as u32);
+            tmp = x.0[i].wrapping_sub(C::U32_MODULUS[i]) + (carry as u32);
             carry = (tmp as i32) >> SHIFT;
             x.0[i] = tmp & MASK;
         }
@@ -166,31 +238,31 @@ fn add_assign(x: &mut Inner, y: &Inner) {
 // struct Inner([u32; 9]);
 type Inner = BigInteger256;
 
-#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct NewFp256 (Inner);
+#[derive(Clone, Copy, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
+pub struct NewFp256<C: FieldConstants> (pub Inner, PhantomData<C>);
 
-impl Display for NewFp256 {
+impl<C: FieldConstants> Display for NewFp256<C> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_fmt(format_args!("{:?}", self.0))
     }
 }
 
-        // impl ark_std::fmt::Debug for NewFp256 {
-//     fn fmt(&self, f: &mut ark_std::fmt::Formatter<'_>) -> ark_std::fmt::Result {
-//         use crate::ark_std::string::ToString;
-//         let r: BigInteger256 = self.into_repr();
-//         let bigint: num_bigint::BigUint = r.into();
-//         let s = bigint.to_string();
-//         f.write_fmt(format_args!("Fp({})", s))
-//     }
-// }
+impl<C: FieldConstants> ark_std::fmt::Debug for NewFp256<C> {
+    fn fmt(&self, f: &mut ark_std::fmt::Formatter<'_>) -> ark_std::fmt::Result {
+        use crate::ark_std::string::ToString;
+        let r: BigInteger256 = self.into_repr();
+        let bigint: num_bigint::BigUint = r.into();
+        let s = bigint.to_string();
+        f.write_fmt(format_args!("Fp({})", s))
+    }
+}
 
-impl NewFp256 {
+impl<C: FieldConstants> NewFp256<C> {
     const NLIMBS: usize = 9;
 
     #[inline]
     pub const fn new(element: Inner) -> Self {
-        Self(element)
+        Self(element, PhantomData)
         // let BigInteger256(bigint) = element;
         // Self(from_64x4(bigint))
     }
@@ -293,7 +365,7 @@ impl NewFp256 {
         if r.const_is_zero() {
             r
         } else {
-            r = r.const_mul(&NewFp256(r2), &modulus, inv);
+            r = r.const_mul(&NewFp256(r2, PhantomData), &modulus, inv);
             r
         }
     }
@@ -350,7 +422,7 @@ impl NewFp256 {
             // assert_eq!(qi, qi2);
 
             // let carry = add_mul(tmp, qi, U64_MODULUS[0]) >> SHIFT64;
-            let carry = (tmp + (qi * U64_MODULUS[0])) >> SHIFT64;
+            let carry = (tmp + (qi * C::U64_MODULUS[0])) >> SHIFT64;
 
             // // j=0, compute q_i
             // let j = 0;
@@ -390,7 +462,7 @@ impl NewFp256 {
                     xy_j += carry;
                 }
                 // xy[j - 1] = add_mul((xi * y_local[j]) + xy_j, qi, U64_MODULUS[j]);
-                xy[j - 1] = (xy_j + (xi * y_local[j])) + (qi * U64_MODULUS[j]);
+                xy[j - 1] = (xy_j + (xi * y_local[j])) + (qi * C::U64_MODULUS[j]);
                 // xy[j - 1] = (xy_j + (xi * y_local[j])) + (qi * U64_MODULUS[j]);
                 j += 1;
             }
@@ -422,7 +494,7 @@ impl NewFp256 {
                 // todo!();
             } else {
                 // xy[j - 1] = add_mul(xi * y_local[j], qi, U64_MODULUS[j]);
-                xy[j - 1] = (xi * y_local[j]) + (qi * U64_MODULUS[j]);
+                xy[j - 1] = (xi * y_local[j]) + (qi * C::U64_MODULUS[j]);
                 // xy[j - 1] = (xi * y_local[j]) + (qi * U64_MODULUS[j]);
             }
 
@@ -458,7 +530,7 @@ impl NewFp256 {
     }
 
     const fn const_reduce(mut self, _modulus: &Inner) -> Self {
-        conditional_reduce(&mut self.0);
+        conditional_reduce::<C>(&mut self.0);
         // if !self.const_is_valid(modulus) {
         //     self.0 = Self::sub_noborrow(&self.0, &modulus);
         // }
@@ -468,11 +540,11 @@ impl NewFp256 {
     // don't fix warning -- that makes it 15% slower!
     #[allow(clippy::comparison_chain)]
     const fn const_is_valid(&self, _modulus: &Inner) -> bool {
-        let mut i = NewFp256::NLIMBS - 1;
+        let mut i = NewFp256::<C>::NLIMBS - 1;
         loop {
-            if self.0.0[i] > U32_MODULUS[i] {
+            if self.0.0[i] > C::U32_MODULUS[i] {
                 return false;
-            } else if self.0.0[i] < U32_MODULUS[i] {
+            } else if self.0.0[i] < C::U32_MODULUS[i] {
                 return true;
             }
             i -= 1;
@@ -484,37 +556,37 @@ impl NewFp256 {
     }
 }
 
-impl NewFp256 {
+impl<C: FieldConstants> NewFp256<C> {
     pub(crate) fn is_valid(&self) -> bool {
-        self.const_is_valid(&BigInteger256(U32_MODULUS))
+        self.const_is_valid(&BigInteger256(C::U32_MODULUS))
     }
     fn reduce(&mut self) {
-        *self = self.const_reduce(&BigInteger256(U32_MODULUS));
+        *self = self.const_reduce(&BigInteger256(C::U32_MODULUS));
         // if !self.is_valid() {
         //     self.0.sub_noborrow(&P::MODULUS);
         // }
     }
 }
 
-impl Zero for NewFp256 {
+impl<C: FieldConstants> Zero for NewFp256<C> {
     fn zero() -> Self {
-        Self(BigInteger256([0; 9]))
+        Self(BigInteger256([0; 9]), PhantomData)
     }
     fn is_zero(&self) -> bool {
         self.0.0 == [0u32; 9]
     }
 }
 
-impl One for NewFp256 {
+impl<C: FieldConstants> One for NewFp256<C> {
     fn one() -> Self {
-        Self(BigInteger256(U32_R))
+        Self(BigInteger256(C::U32_R), PhantomData)
     }
     fn is_one(&self) -> bool {
-        self.0.0 == U32_R
+        self.0.0 == C::U32_R
     }
 }
 
-impl Neg for NewFp256 {
+impl<C: FieldConstants> Neg for NewFp256<C> {
     type Output = Self;
     #[must_use]
     fn neg(self) -> Self {
@@ -522,56 +594,56 @@ impl Neg for NewFp256 {
         if !self.is_zero() {
             let mut tmp = NewFpParameters::MODULUS;
             tmp.sub_noborrow(&self.0);
-            NewFp256(tmp)
+            NewFp256(tmp, PhantomData)
         } else {
             self
         }
     }
 }
-impl core::ops::DivAssign<Self> for NewFp256 {
+impl<C: FieldConstants> core::ops::DivAssign<Self> for NewFp256<C> {
     fn div_assign(&mut self, other: Self) {
         self.div_assign(&other)
     }
 }
-impl Add<NewFp256> for NewFp256 {
+impl<C: FieldConstants> Add<Self> for NewFp256<C> {
     type Output = Self;
     fn add(mut self, other: Self) -> Self {
         self.add_assign(other);
         self
     }
 }
-impl Sub<NewFp256> for NewFp256 {
+impl<C: FieldConstants> Sub<Self> for NewFp256<C> {
     type Output = Self;
     fn sub(mut self, other: Self) -> Self {
         self.sub_assign(other);
         self
     }
 }
-impl Div<NewFp256> for NewFp256 {
+impl<C: FieldConstants> Div<Self> for NewFp256<C> {
     type Output = Self;
     fn div(mut self, other: Self) -> Self {
         self.div_assign(other);
         self
     }
 }
-impl core::ops::AddAssign<Self> for NewFp256 {
+impl<C: FieldConstants> core::ops::AddAssign<Self> for NewFp256<C> {
     fn add_assign(&mut self, other: Self) {
-        add_assign(&mut self.0, &other.0)
+        add_assign::<C>(&mut self.0, &other.0)
     }
 }
-impl Mul<NewFp256> for NewFp256 {
+impl<C: FieldConstants> Mul<Self> for NewFp256<C> {
     type Output = Self;
     fn mul(mut self, other: Self) -> Self {
         self.mul_assign(other);
         self
     }
 }
-impl core::ops::MulAssign<Self> for NewFp256 {
+impl<C: FieldConstants> core::ops::MulAssign<Self> for NewFp256<C> {
     fn mul_assign(&mut self, other: Self) {
-        *self = self.const_mul(&other, &BigInteger256(U32_MODULUS), U32_MINV);
+        *self = self.const_mul(&other, &BigInteger256(C::U32_MODULUS), C::U32_MINV);
     }
 }
-impl SubAssign<Self> for NewFp256 {
+impl<C: FieldConstants> SubAssign<Self> for NewFp256<C> {
     fn sub_assign(&mut self, other: Self) {
         use crate::FpParameters;
         if other.0 > self.0 {
@@ -580,30 +652,30 @@ impl SubAssign<Self> for NewFp256 {
         self.0.sub_noborrow(&other.0);
     }
 }
-impl core::iter::Sum<Self> for NewFp256 {
+impl<C: FieldConstants> core::iter::Sum<Self> for NewFp256<C> {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.fold(Self::zero(), core::ops::Add::add)
     }
 }
-impl core::iter::Product<Self> for NewFp256 {
+impl<C: FieldConstants> core::iter::Product<Self> for NewFp256<C> {
     fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.fold(Self::one(), Mul::mul)
     }
 }
 
-impl<'a> Div<&'a NewFp256> for NewFp256 {
+impl<'a, C: FieldConstants> Div<&'a Self> for NewFp256<C> {
     type Output = Self;
     fn div(mut self, other: &'a Self) -> Self {
         self.div_assign(other);
         self
     }
 }
-impl<'a> DivAssign<&'a Self> for NewFp256 {
+impl<'a, C: FieldConstants> DivAssign<&'a Self> for NewFp256<C> {
     fn div_assign(&mut self, other: &'a Self) {
         self.mul_assign(&other.inverse().unwrap());
     }
 }
-impl<'a> SubAssign<&'a Self> for NewFp256 {
+impl<'a, C: FieldConstants> SubAssign<&'a Self> for NewFp256<C> {
     fn sub_assign(&mut self, other: &'a Self) {
         use crate::FpParameters;
         if other.0 > self.0 {
@@ -612,82 +684,102 @@ impl<'a> SubAssign<&'a Self> for NewFp256 {
         self.0.sub_noborrow(&other.0);
     }
 }
-impl<'a> Sub<&'a NewFp256> for NewFp256 {
+impl<'a, C: FieldConstants> Sub<&'a Self> for NewFp256<C> {
     type Output = Self;
     fn sub(mut self, other: &'a Self) -> Self {
         self.sub_assign(other);
         self
     }
 }
-impl<'a> core::iter::Product<&'a Self> for NewFp256 {
+impl<'a, C: FieldConstants> core::iter::Product<&'a Self> for NewFp256<C> {
     fn product<I: Iterator<Item = &'a Self>>(iter: I) -> Self {
         iter.fold(Self::one(), Mul::mul)
     }
 }
-impl<'a> core::iter::Sum<&'a Self> for NewFp256 {
+impl<'a, C: FieldConstants> core::iter::Sum<&'a Self> for NewFp256<C> {
     fn sum<I: Iterator<Item = &'a Self>>(iter: I) -> Self {
         iter.fold(Self::zero(), core::ops::Add::add)
     }
 }
-impl<'a> Add<&'a NewFp256> for NewFp256 {
+impl<'a, C: FieldConstants> Add<&'a Self> for NewFp256<C> {
     type Output = Self;
     fn add(mut self, other: &'a Self) -> Self {
         self.add_assign(other);
         self
     }
 }
-impl<'a> core::ops::AddAssign<&'a Self> for NewFp256 {
+impl<'a, C: FieldConstants> core::ops::AddAssign<&'a Self> for NewFp256<C> {
     fn add_assign(&mut self, other: &'a Self) {
-        add_assign(&mut self.0, &other.0)
+        add_assign::<C>(&mut self.0, &other.0)
     }
 }
-impl<'a> Mul<&'a NewFp256> for NewFp256 {
+impl<'a, C: FieldConstants> Mul<&'a Self> for NewFp256<C> {
     type Output = Self;
     fn mul(mut self, other: &'a Self) -> Self {
         self.mul_assign(other);
         self
     }
 }
-impl<'a> core::ops::MulAssign<&'a Self> for NewFp256 {
+impl<'a, C: FieldConstants> core::ops::MulAssign<&'a Self> for NewFp256<C> {
     fn mul_assign(&mut self, other: &'a Self) {
-        *self = self.const_mul(&other, &BigInteger256(U32_MODULUS), U32_MINV);
+        *self = self.const_mul(&other, &BigInteger256(C::U32_MODULUS), C::U32_MINV);
     }
 }
 
-impl From<u128> for NewFp256 {
+impl<C: FieldConstants> From<u128> for NewFp256<C> {
     fn from(value: u128) -> Self {
         let hi = (value >> 64) as u64;
         let lo = value as u64;
-        Self(BigInteger256(from_64x4([lo, hi, 0, 0])))
+        Self::from_repr(BigInteger256(from_64x4([lo, hi, 0, 0]))).unwrap()
     }
 }
-impl From<u64> for NewFp256 {
+impl<C: FieldConstants> From<u64> for NewFp256<C> {
     fn from(value: u64) -> Self {
-        Self(BigInteger256(from_64x4([value, 0, 0, 0])))
+        Self::from_repr(BigInteger256::from_64x4([value, 0, 0, 0])).unwrap()
     }
 }
-impl From<u32> for NewFp256 {
+impl<C: FieldConstants> From<u32> for NewFp256<C> {
     fn from(value: u32) -> Self {
-        Self(BigInteger256(from_64x4([value as u64, 0, 0, 0])))
+        Self::from_repr(BigInteger256::from_64x4([value as u64, 0, 0, 0])).unwrap()
     }
 }
-impl From<u16> for NewFp256 {
+impl<C: FieldConstants> From<i64> for NewFp256<C> {
+    fn from(value: i64) -> Self {
+        let abs = Self::from(value.unsigned_abs());
+        if value.is_positive() {
+            abs
+        } else {
+            -abs
+        }
+    }
+}
+impl<C: FieldConstants> From<i32> for NewFp256<C> {
+    fn from(value: i32) -> Self {
+        let abs = Self::from(value.unsigned_abs());
+        if value.is_positive() {
+            abs
+        } else {
+            -abs
+        }
+    }
+}
+impl<C: FieldConstants> From<u16> for NewFp256<C> {
     fn from(value: u16) -> Self {
-        Self(BigInteger256(from_64x4([value as u64, 0, 0, 0])))
+        Self::from_repr(BigInteger256::from_64x4([value as u64, 0, 0, 0])).unwrap()
     }
 }
-impl From<u8> for NewFp256 {
+impl<C: FieldConstants> From<u8> for NewFp256<C> {
     fn from(value: u8) -> Self {
-        Self(BigInteger256(from_64x4([value as u64, 0, 0, 0])))
+        Self::from_repr(BigInteger256::from_64x4([value as u64, 0, 0, 0])).unwrap()
     }
 }
-impl From<bool> for NewFp256 {
+impl<C: FieldConstants> From<bool> for NewFp256<C> {
     fn from(value: bool) -> Self {
-        Self(BigInteger256(from_64x4([value as u64, 0, 0, 0])))
+        Self::from_repr(BigInteger256::from_64x4([value as u64, 0, 0, 0])).unwrap()
     }
 }
 
-impl CanonicalSerializeWithFlags for NewFp256 {
+impl<C: FieldConstants> CanonicalSerializeWithFlags for NewFp256<C> {
     fn serialize_with_flags<W: ark_std::io::Write, F: Flags>(
         &self,
         mut writer: W,
@@ -709,7 +801,7 @@ impl CanonicalSerializeWithFlags for NewFp256 {
         // buffer_byte_size(P::MODULUS_BITS as usize + F::BIT_SIZE)
     }
 }
-impl CanonicalSerialize for NewFp256 {
+impl<C: FieldConstants> CanonicalSerialize for NewFp256<C> {
     fn serialize<W: ark_std::io::Write>(&self, writer: W) -> Result<(), SerializationError> {
         self.serialize_with_flags(writer, EmptyFlags)
     }
@@ -717,7 +809,7 @@ impl CanonicalSerialize for NewFp256 {
         self.serialized_size_with_flags::<EmptyFlags>()
     }
 }
-impl CanonicalDeserializeWithFlags for NewFp256 {
+impl<C: FieldConstants> CanonicalDeserializeWithFlags for NewFp256<C> {
     fn deserialize_with_flags<R: ark_std::io::Read, F: Flags>(
         mut reader: R,
     ) -> Result<(Self, F), SerializationError> {
@@ -733,7 +825,7 @@ impl CanonicalDeserializeWithFlags for NewFp256 {
         // Ok((Self::read(&masked_bytes[..])?, flags))
     }
 }
-impl CanonicalDeserialize for NewFp256 {
+impl<C: FieldConstants> CanonicalDeserialize for NewFp256<C> {
     fn deserialize<R: ark_std::io::Read>(reader: R) -> Result<Self, SerializationError> {
         Self::deserialize_with_flags::<R, EmptyFlags>(reader).map(|(r, _)| r)
     }
@@ -817,18 +909,18 @@ impl crate::FpParameters for NewFpParameters {
     const INV: u64 = 11037532056220336127;
 }
 
-impl PrimeField for NewFp256 {
+impl<C: FieldConstants + 'static + Send + Sync + Sized> PrimeField for NewFp256<C> {
     type Params = NewFpParameters;
     type BigInt = BigInteger256;
     #[inline]
     fn from_repr(r: BigInteger256) -> Option<Self> {
         use crate::FpParameters;
 
-        let mut r = Self(r);
+        let mut r = Self(r, PhantomData);
         if r.is_zero() {
             Some(r)
         } else if r.is_valid() {
-            r *= &Self(NewFpParameters::R2);
+            r *= &Self(NewFpParameters::R2, PhantomData);
             Some(r)
         } else {
             None
@@ -838,16 +930,16 @@ impl PrimeField for NewFp256 {
     #[allow(clippy::modulo_one)]
     fn into_repr(&self) -> BigInteger256 {
         let one = BigInteger256([1, 0, 0, 0, 0, 0, 0, 0, 0]);
-        self.mul(Self(one)).0
+        self.mul(Self(one, PhantomData)).0
     }
 }
 
-impl From<num_bigint::BigUint> for NewFp256 {
-    fn from(val: num_bigint::BigUint) -> NewFp256 {
-        NewFp256::from_le_bytes_mod_order(&val.to_bytes_le())
+impl<C: FieldConstants> From<num_bigint::BigUint> for NewFp256<C> {
+    fn from(val: num_bigint::BigUint) -> Self {
+        Self::from_le_bytes_mod_order(&val.to_bytes_le())
     }
 }
-impl Into<num_bigint::BigUint> for NewFp256 {
+impl<C: FieldConstants> Into<num_bigint::BigUint> for NewFp256<C> {
     fn into(self) -> num_bigint::BigUint {
         self.into_repr().into()
     }
@@ -894,7 +986,7 @@ impl Into<num_bigint::BigUint> for NewFp256 {
 //     }
 // }
 
-impl FromStr for NewFp256 {
+impl<C: FieldConstants> FromStr for NewFp256<C> {
     type Err = ();
     /// Interpret a string of numbers as a (congruent) prime field element.
     /// Does not accept unnecessary leading zeroes or a blank string.
@@ -935,12 +1027,12 @@ impl FromStr for NewFp256 {
     }
 }
 
-impl ToBytes for NewFp256 {
+impl<C: FieldConstants> ToBytes for NewFp256<C> {
     fn write<W: Write>(&self, writer: W) -> IoResult<()> {
         self.into_repr().write(writer)
     }
 }
-impl FromBytes for NewFp256 {
+impl<C: FieldConstants> FromBytes for NewFp256<C> {
     fn read<R: Read>(reader: R) -> IoResult<Self> {
         BigInteger256::read(reader).and_then(|b| match NewFp256::from_repr(b) {
             Some(f) => Ok(f),
@@ -953,7 +1045,7 @@ impl FromBytes for NewFp256 {
     // + core::iter::Product<Self>
     // + for<'a> core::iter::Product<&'a Self>
 
-impl Field for NewFp256 {
+impl<C: FieldConstants> Field for NewFp256<C> {
     type BasePrimeField = Self;
     fn extension_degree() -> u64 {
         1
@@ -1008,7 +1100,7 @@ impl Field for NewFp256 {
             let one = BigInteger256::from(1);
             let mut u = self.0;
             let mut v = NewFpParameters::MODULUS;
-            let mut b = Self(NewFpParameters::R2);
+            let mut b = Self(NewFpParameters::R2, PhantomData);
             let mut c = Self::zero();
             while u != one && v != one {
                 while u.is_even() {
@@ -1057,23 +1149,23 @@ impl Field for NewFp256 {
     fn frobenius_map(&mut self, _: usize) {}
 }
 
-impl ark_std::rand::distributions::Distribution<NewFp256>
+impl<C: FieldConstants> ark_std::rand::distributions::Distribution<NewFp256<C>>
     for ark_std::rand::distributions::Standard
 {
     #[inline]
-    fn sample<R: ark_std::rand::Rng + ?Sized>(&self, rng: &mut R) -> NewFp256 {
+    fn sample<R: ark_std::rand::Rng + ?Sized>(&self, rng: &mut R) -> NewFp256<C> {
         loop {
             let mut tmp = NewFp256(
                 rng.sample(ark_std::rand::distributions::Standard),
-                // PhantomData,
+                PhantomData,
             );
-            if !(REPR_SHAVE_BITS <= 32) {
+            if !(C::REPR_SHAVE_BITS <= 32) {
                 panic!("assertion failed: P::REPR_SHAVE_BITS <= 32")
             }
-            let mask = if REPR_SHAVE_BITS == 32 {
+            let mask = if C::REPR_SHAVE_BITS == 32 {
                 0
             } else {
-                core::u32::MAX >> REPR_SHAVE_BITS
+                core::u32::MAX >> C::REPR_SHAVE_BITS
             };
             tmp.0.0.as_mut().last_mut().map(|val| *val &= mask);
             if tmp.is_valid() {
@@ -1109,9 +1201,9 @@ impl crate::FftParameters for NewFpParameters {
     //    ]
 }
 
-impl zeroize::DefaultIsZeroes for NewFp256 {}
+impl<C: FieldConstants> zeroize::DefaultIsZeroes for NewFp256<C> {}
 
-impl FftField for NewFp256 {
+impl<C: FieldConstants> FftField for NewFp256<C> {
     type FftParams = NewFpParameters;
     fn two_adic_root_of_unity() -> Self {
         todo!()
@@ -1127,7 +1219,7 @@ impl FftField for NewFp256 {
     }
 }
 
-impl SquareRootField for NewFp256 {
+impl<C: FieldConstants> SquareRootField for NewFp256<C> {
     #[inline]
     fn legendre(&self) -> LegendreSymbol {
         use crate::fields::LegendreSymbol::*;

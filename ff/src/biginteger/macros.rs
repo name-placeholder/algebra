@@ -7,157 +7,166 @@ macro_rules! bigint_impl {
             pub const fn new(value: [u32; $num_limbs]) -> Self {
                 $name(value)
             }
+
+            pub const fn from_64x4(value: [u64; 4]) -> Self {
+                $name(crate::from_64x4(value))
+            }
+
+            pub const fn to_64x4(&self) -> [u64; 4] {
+                crate::fields::to_64x4(self.0)
+            }
         }
 
         impl BigInteger for $name {
             const NUM_LIMBS: usize = $num_limbs;
 
-            #[inline]
-            #[ark_ff_asm::unroll_for_loops]
-            fn add_nocarry(&mut self, other: &Self) -> bool {
-                let mut carry = 0;
-
-                for i in 0..$num_limbs {
-                    // #[cfg(all(target_arch = "x86_64", feature = "asm"))]
-                    // #[allow(unsafe_code)]
-                    // unsafe {
-                    //     use core::arch::x86_64::_addcarry_u64;
-                    //     carry = _addcarry_u64(carry, self.0[i], other.0[i], &mut self.0[i])
-                    // };
-
-                    // #[cfg(not(all(target_arch = "x86_64", feature = "asm")))]
-                    {
-                        self.0[i] = adc!(self.0[i], other.0[i], &mut carry);
-                    }
-                }
-
-                carry != 0
+            fn to_64x4(&self) -> [u64; 4] {
+                crate::fields::to_64x4(self.0)
+            }
+            fn from_64x4(value: [u64; 4]) -> Self {
+                $name(crate::from_64x4(value))
             }
 
             #[inline]
             #[ark_ff_asm::unroll_for_loops]
-            fn sub_noborrow(&mut self, other: &Self) -> bool {
-                let mut borrow = 0;
+            fn add_nocarry(&mut self, other: &Self) -> bool {
+                let mut this = self.to_64x4();
+                let other = other.to_64x4();
 
-                for i in 0..$num_limbs {
-                    // #[cfg(all(target_arch = "x86_64", feature = "asm"))]
-                    // #[allow(unsafe_code)]
-                    // unsafe {
-                    //     use core::arch::x86_64::_subborrow_u64;
-                    //     borrow = _subborrow_u64(borrow, self.0[i], other.0[i], &mut self.0[i])
-                    // };
-
-                    // #[cfg(not(all(target_arch = "x86_64", feature = "asm")))]
-                    {
-                        self.0[i] = sbb!(self.0[i], other.0[i], &mut borrow);
-                    }
+                let mut carry = 0;
+                for i in 0..4 {
+                    this[i] = adc!(this[i], other[i], &mut carry);
                 }
+                *self = Self::from_64x4(this);
+                carry != 0
+            }
 
+            #[inline]
+            // #[ark_ff_asm::unroll_for_loops]
+            fn sub_noborrow(&mut self, other: &Self) -> bool {
+                let mut this = self.to_64x4();
+                let other = other.to_64x4();
+
+                let mut borrow = 0;
+                for i in 0..4 {
+                    this[i] = sbb!(this[i], other[i], &mut borrow);
+                }
+                *self = Self::from_64x4(this);
                 borrow != 0
+
+                // let mut borrow = 0;
+
+                // for i in 0..$num_limbs {
+                //     // #[cfg(all(target_arch = "x86_64", feature = "asm"))]
+                //     // #[allow(unsafe_code)]
+                //     // unsafe {
+                //     //     use core::arch::x86_64::_subborrow_u64;
+                //     //     borrow = _subborrow_u64(borrow, self.0[i], other.0[i], &mut self.0[i])
+                //     // };
+
+                //     // #[cfg(not(all(target_arch = "x86_64", feature = "asm")))]
+                //     {
+                //         self.0[i] = sbb!(self.0[i], other.0[i], &mut borrow);
+                //     }
+                // }
+
+                // borrow != 0
             }
 
             #[inline]
             #[ark_ff_asm::unroll_for_loops]
             #[allow(unused)]
             fn mul2(&mut self) {
-                // #[cfg(all(target_arch = "x86_64", feature = "asm"))]
-                // #[allow(unsafe_code)]
-                // {
-                //     let mut carry = 0;
-
-                //     for i in 0..$num_limbs {
-                //         unsafe {
-                //             use core::arch::x86_64::_addcarry_u64;
-                //             carry = _addcarry_u64(carry, self.0[i], self.0[i], &mut self.0[i])
-                //         };
-                //     }
-                // }
-
-                // #[cfg(not(all(target_arch = "x86_64", feature = "asm")))]
-                {
-                    let mut last = 0;
-                    for i in 0..$num_limbs {
-                        let a = &mut self.0[i];
-                        let tmp = *a >> 31;
-                        // let tmp = *a >> 63;
-                        *a <<= 1;
-                        *a |= last;
-                        last = tmp;
-                    }
+                let mut value = self.to_64x4();
+                let mut last = 0;
+                for i in 0..4 {
+                    let a = &mut value[i];
+                    let tmp = *a >> 63;
+                    *a <<= 1;
+                    *a |= last;
+                    last = tmp;
                 }
+                *self = Self::from_64x4(value)
             }
 
             #[inline]
             #[ark_ff_asm::unroll_for_loops]
             fn muln(&mut self, mut n: u32) {
-                if n >= 32 * $num_limbs {
+                let mut value = self.to_64x4();
+                if n >= 64 * 4 {
                     *self = Self::from(0);
                     return;
                 }
 
-                while n >= 32 {
+                while n >= 64 {
                     let mut t = 0;
-                    for i in 0..$num_limbs {
-                        core::mem::swap(&mut t, &mut self.0[i]);
+                    for i in 0..4 {
+                        core::mem::swap(&mut t, &mut value[i]);
                     }
-                    n -= 32;
+                    n -= 64;
                 }
 
                 if n > 0 {
                     let mut t = 0;
                     #[allow(unused)]
-                    for i in 0..$num_limbs {
-                        let a = &mut self.0[i];
-                        let t2 = *a >> (32 - n);
+                    for i in 0..4 {
+                        let a = &mut value[i];
+                        let t2 = *a >> (64 - n);
                         *a <<= n;
                         *a |= t;
                         t = t2;
                     }
                 }
+                *self = Self::from_64x4(value)
             }
 
             #[inline]
             #[ark_ff_asm::unroll_for_loops]
             #[allow(unused)]
             fn div2(&mut self) {
+                let mut value = self.to_64x4();
                 let mut t = 0;
-                for i in 0..$num_limbs {
-                    let a = &mut self.0[$num_limbs - i - 1];
-                    let t2 = *a << 31;
-                    // let t2 = *a << 63;
+                for i in 0..4 {
+                    let a = &mut value[4 - i - 1];
+                    let t2 = *a << 63;
                     *a >>= 1;
                     *a |= t;
                     t = t2;
                 }
+                *self = Self::from_64x4(value)
             }
 
             #[inline]
             #[ark_ff_asm::unroll_for_loops]
             fn divn(&mut self, mut n: u32) {
-                if n >= 32 * $num_limbs {
+                let mut value = self.to_64x4();
+
+                if n >= 64 * 4 {
                     *self = Self::from(0);
                     return;
                 }
 
-                while n >= 32 {
+                while n >= 64 {
                     let mut t = 0;
-                    for i in 0..$num_limbs {
-                        core::mem::swap(&mut t, &mut self.0[$num_limbs - i - 1]);
+                    for i in 0..4 {
+                        core::mem::swap(&mut t, &mut value[4 - i - 1]);
                     }
-                    n -= 32;
+                    n -= 64;
                 }
 
                 if n > 0 {
                     let mut t = 0;
                     #[allow(unused)]
-                    for i in 0..$num_limbs {
-                        let a = &mut self.0[$num_limbs - i - 1];
-                        let t2 = *a << (32 - n);
+                    for i in 0..4 {
+                        let a = &mut value[4 - i - 1];
+                        let t2 = *a << (64 - n);
                         *a >>= n;
                         *a |= t;
                         t = t2;
                     }
                 }
+
+                *self = Self::from_64x4(value)
             }
 
             #[inline]
@@ -182,61 +191,82 @@ macro_rules! bigint_impl {
 
             #[inline]
             fn num_bits(&self) -> u32 {
-                let mut ret = $num_limbs * 32;
-                for i in self.0.iter().rev() {
+                let value = self.to_64x4();
+
+                let mut ret = 4 * 64;
+                for i in value.iter().rev() {
                     let leading = i.leading_zeros();
                     ret -= leading;
-                    if leading != 32 {
+                    if leading != 64 {
                         break;
                     }
                 }
 
                 ret
+                // let mut ret = $num_limbs * 32;
+                // for i in self.0.iter().rev() {
+                //     let leading = i.leading_zeros();
+                //     ret -= leading;
+                //     if leading != 32 {
+                //         break;
+                //     }
+                // }
+
+                // ret
             }
 
             #[inline]
             fn get_bit(&self, i: usize) -> bool {
-                if i >= 32 * $num_limbs {
+                let value = self.to_64x4();
+                if i >= 64 * 4 {
                     false
                 } else {
-                    let limb = i / 32;
-                    let bit = i - (32 * limb);
-                    (self.0[limb] & (1 << bit)) != 0
+                    let limb = i / 64;
+                    let bit = i - (64 * limb);
+                    (value[limb] & (1 << bit)) != 0
                 }
+
+                // if i >= 32 * $num_limbs {
+                //     false
+                // } else {
+                //     let limb = i / 32;
+                //     let bit = i - (32 * limb);
+                //     (self.0[limb] & (1 << bit)) != 0
+                // }
             }
 
             #[inline]
             fn from_bits_be(bits: &[bool]) -> Self {
-                let mut res = Self::default();
-                let mut acc: u32 = 0;
+                let mut res: [u64; 4] = <[u64; 4]>::default();
+                let mut acc: u64 = 0;
 
                 let mut bits = bits.to_vec();
                 bits.reverse();
-                for (i, bits32) in bits.chunks(32).enumerate() {
-                    for bit in bits32.iter().rev() {
+                for (i, bits64) in bits.chunks(64).enumerate() {
+                    for bit in bits64.iter().rev() {
                         acc <<= 1;
-                        acc += *bit as u32;
+                        acc += *bit as u64;
                     }
-                    res.0[i] = acc;
+                    res[i] = acc;
                     acc = 0;
                 }
-                res
+                Self::from_64x4(res)
             }
 
             fn from_bits_le(bits: &[bool]) -> Self {
-                let mut res = Self::default();
-                let mut acc: u32 = 0;
+                let mut res: [u64; 4] = <[u64; 4]>::default();
+                let mut acc: u64 = 0;
 
                 let bits = bits.to_vec();
-                for (i, bits32) in bits.chunks(32).enumerate() {
-                    for bit in bits32.iter().rev() {
+                for (i, bits64) in bits.chunks(64).enumerate() {
+                    for bit in bits64.iter().rev() {
                         acc <<= 1;
-                        acc += *bit as u32;
+                        acc += *bit as u64;
                     }
-                    res.0[i] = acc;
+                    res[i] = acc;
                     acc = 0;
                 }
-                res
+                Self::from_64x4(res)
             }
 
             #[inline]
@@ -248,8 +278,11 @@ macro_rules! bigint_impl {
 
             #[inline]
             fn to_bytes_le(&self) -> Vec<u8> {
-                let array_map = self.0.iter().map(|limb| limb.to_le_bytes());
-                let mut res = Vec::<u8>::with_capacity($num_limbs * 8);
+                let bigint = self.to_64x4();
+                let array_map = bigint.iter().map(|limb| limb.to_le_bytes());
+                // let array_map = self.0.iter().map(|limb| limb.to_le_bytes());
+                let mut res = Vec::<u8>::with_capacity(4 * 8);
+                // let mut res = Vec::<u8>::with_capacity($num_limbs * 8);
                 for limb in array_map {
                     res.extend_from_slice(&limb);
                 }
@@ -281,14 +314,16 @@ macro_rules! bigint_impl {
         impl ToBytes for $name {
             #[inline]
             fn write<W: Write>(&self, writer: W) -> IoResult<()> {
-                self.0.write(writer)
+                let bigint: [u64; 4] = self.to_64x4();
+                bigint.write(writer)
             }
         }
 
         impl FromBytes for $name {
             #[inline]
             fn read<R: Read>(reader: R) -> IoResult<Self> {
-                <[u32; $num_limbs]>::read(reader).map(Self::new)
+                <[u64; 4]>::read(reader).map(Self::from_64x4)
+                // <[u32; $num_limbs]>::read(reader).map(Self::new)
             }
         }
 
@@ -349,10 +384,11 @@ macro_rules! bigint_impl {
         impl From<u64> for $name {
             #[inline]
             fn from(val: u64) -> $name {
-                let mut repr = Self::default();
-                repr.0[0] = val as u32;
-                repr.0[1] = (val >> 32) as u32;
-                repr
+                Self::from_64x4([val, 0, 0, 0])
+                // let mut repr = Self::default();
+                // repr.0[0] = val as u32;
+                // repr.0[1] = (val >> 32) as u32;
+                // repr
             }
         }
 
@@ -363,26 +399,26 @@ macro_rules! bigint_impl {
             fn try_from(val: num_bigint::BigUint) -> Result<$name, Self::Error> {
                 let bytes = val.to_bytes_le();
 
-                if bytes.len() > $num_limbs * 8 {
+                if bytes.len() > 4 * 8 {
                     Err(format!(
                         "A BigUint of {} bytes cannot fit into a {}.",
                         bytes.len(),
                         ark_std::stringify!($name)
                     ))
                 } else {
-                    let mut limbs = [0u32; $num_limbs];
+                    let mut limbs = [0u64; 4];
 
                     bytes
                         .chunks(8)
                         .into_iter()
                         .enumerate()
                         .for_each(|(i, chunk)| {
-                            let mut chunk_padded = [0u8; 4];
+                            let mut chunk_padded = [0u8; 8];
                             chunk_padded[..chunk.len()].copy_from_slice(chunk);
-                            limbs[i] = u32::from_le_bytes(chunk_padded)
+                            limbs[i] = u64::from_le_bytes(chunk_padded)
                         });
 
-                    Ok(Self(limbs))
+                    Ok(Self::from_64x4(limbs))
                 }
             }
         }

@@ -89,6 +89,9 @@ pub trait BigInteger:
     /// Number of limbs.
     const NUM_LIMBS: usize;
 
+    fn to_64x4(&self) -> [u64; 4];
+    fn from_64x4(value: [u64; 4]) -> Self;
+
     /// Add another representation to this one, returning the carry bit.
     fn add_nocarry(&mut self, other: &Self) -> bool;
 
