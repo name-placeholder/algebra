@@ -1,8 +1,7 @@
-use core::convert::TryInto;
 
 use crate::{
     biginteger::{
-        arithmetic as fa, BigInteger as _BigInteger, BigInteger256,
+        BigInteger as _BigInteger, BigInteger256,
     },
     bytes::{FromBytes, ToBytes},
     fields::{FftField, Field, LegendreSymbol, PrimeField, SquareRootField},
@@ -191,23 +190,7 @@ const fn gte_modulus<C: Fp256Parameters>(x: &Inner) -> bool {
 }
 
 #[ark_ff_asm::unroll_for_loops]
-const fn const_conditional_reduce<C: Fp256Parameters>(mut x: Inner) -> Inner {
-    if gte_modulus::<C>(&x) {
-        for i in 0..9 {
-            x.0[i] = x.0[i].wrapping_sub(C::MODULUS.0[i]);
-        }
-        for i in 1..9 {
-            x.0[i] += ((x.0[i - 1] as i32) >> SHIFT) as u32;
-        }
-        for i in 0..8 {
-            x.0[i] &= MASK;
-        }
-    }
-    x
-}
-
-#[ark_ff_asm::unroll_for_loops]
-fn conditional_reduce<C: Fp256Parameters>(x: &mut Inner) {
+const fn conditional_reduce<C: Fp256Parameters>(x: &mut Inner) {
     if gte_modulus::<C>(&x) {
         for i in 0..9 {
             x.0[i] = x.0[i].wrapping_sub(C::MODULUS.0[i]);
@@ -383,7 +366,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
         if r.const_is_zero() {
             r
         } else {
-            r = r.const_mul(&NewFp256(r2, PhantomData), &modulus, inv);
+            r.const_mul(&NewFp256(r2, PhantomData), &modulus, inv);
             r
         }
     }
@@ -400,63 +383,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
     };
 
     #[ark_ff_asm::unroll_for_loops]
-    fn mul_without_reduce(&mut self, other: &Self, _modulus: &Inner, _inv: u32) {
-        // how much terms we can add before a carry
-        // let n_safe_terms = 2u64.pow(64 - 2 * SHIFT) as usize;
-        // how much j steps we can do before a carry:
-        // let n_safe_steps = 2u64.pow(64 - 2 * SHIFT - 1) as usize;
-
-        let x = &mut self.0.0;
-        let y = &other.0.0;
-
-        let mut y_local = [0u64; Self::NLIMBS];
-        for index in 0..9 {
-            y_local[index] = y[index] as u64;
-        }
-
-        let mut xy = [0u64; 9];
-
-        for i in 0..9 {
-            let xi = x[i] as u64;
-
-            let tmp = (xi * y_local[0]) + xy[0];
-            let qi = (MASK64 + 1) - (tmp & MASK64);
-
-            let carry = (tmp + (qi * Self::U64_MODULUS[0])) >> SHIFT64;
-
-            for j in 1..8 {
-                let did_carry = j == 1;
-                // let did_carry = ((j - 1) % n_safe_steps) == 0;
-
-                let mut xy_j = xy[j];
-                if did_carry {
-                    xy_j += carry;
-                }
-                xy[j - 1] = (xy_j + (xi * y_local[j])) + (qi * Self::U64_MODULUS[j]);
-            }
-
-            let j = Self::NLIMBS - 1;
-            let do_carry = false;
-
-            if do_carry {
-                // todo!();
-            } else {
-                xy[j - 1] = (xi * y_local[j]) + (qi * Self::U64_MODULUS[j]);
-            }
-        }
-
-        for j in 1..9 {
-        // let mut j = 1;
-        // while j < Self::NLIMBS {
-            x[j - 1] = (xy[j - 1] as u32) & MASK;
-            xy[j] += xy[j - 1] >> SHIFT64;
-            // j += 1;
-        }
-        x[Self::NLIMBS - 1] = xy[Self::NLIMBS - 1] as u32;
-    }
-
-    #[ark_ff_asm::unroll_for_loops]
-    const fn const_mul_without_reduce(self, other: &Self, _modulus: &Inner, _inv: u32) -> Self {
+    const fn const_mul_without_reduce(&mut self, other: &Self, _modulus: &Inner, _inv: u32) {
 
         // const N: usize = 9;
 
@@ -465,7 +392,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
         // how much j steps we can do before a carry:
         // let n_safe_steps = 2u64.pow(64 - 2 * SHIFT - 1) as usize;
 
-        let mut x = self.0.0;
+        let x = &mut self.0.0;
         let y = &other.0.0;
         // let y_local = other.0.0;
 
@@ -613,18 +540,16 @@ impl<C: Fp256Parameters> NewFp256<C> {
             // j += 1;
         }
         x[Self::NLIMBS - 1] = xy[Self::NLIMBS - 1] as u32;
-
-        Self(BigInteger256(x), PhantomData)
     }
 
-    const fn const_mul(mut self, other: &Self, modulus: &Inner, inv: u32) -> Self {
-        self = self.const_mul_without_reduce(other, modulus, inv);
-        self.const_reduce(modulus)
+    const fn const_mul(&mut self, other: &Self, modulus: &Inner, inv: u32) {
+        self.const_mul_without_reduce(other, modulus, inv);
+        self.const_reduce(modulus);
     }
 
-    const fn const_reduce(self, _modulus: &Inner) -> Self {
-        let reduced = const_conditional_reduce::<C>(self.0);
-        Self(reduced, PhantomData)
+    const fn const_reduce(&mut self, _modulus: &Inner) {
+        conditional_reduce::<C>(&mut self.0);
+        // Self(reduced, PhantomData)
         // if !self.const_is_valid(modulus) {
         //     self.0 = Self::sub_noborrow(&self.0, &modulus);
         // }
@@ -654,7 +579,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
         self.const_is_valid(&C::MODULUS)
     }
     fn reduce(&mut self) {
-        *self = self.const_reduce(&C::MODULUS);
+        self.const_reduce(&C::MODULUS);
         // if !self.is_valid() {
         //     self.0.sub_noborrow(&P::MODULUS);
         // }
@@ -732,8 +657,7 @@ impl<C: Fp256Parameters> Mul<Self> for NewFp256<C> {
 }
 impl<C: Fp256Parameters> core::ops::MulAssign<Self> for NewFp256<C> {
     fn mul_assign(&mut self, other: Self) {
-        self.mul_without_reduce(&other, &C::MODULUS, C::INV as u32);
-        conditional_reduce::<C>(&mut self.0);
+        self.const_mul(&other, &C::MODULUS, C::INV as u32);
     }
 }
 impl<C: Fp256Parameters> SubAssign<Self> for NewFp256<C> {
@@ -813,8 +737,7 @@ impl<'a, C: Fp256Parameters> Mul<&'a Self> for NewFp256<C> {
 }
 impl<'a, C: Fp256Parameters> core::ops::MulAssign<&'a Self> for NewFp256<C> {
     fn mul_assign(&mut self, other: &'a Self) {
-        self.mul_without_reduce(&other, &C::MODULUS, C::INV as u32);
-        conditional_reduce::<C>(&mut self.0);
+        self.const_mul(&other, &C::MODULUS, C::INV as u32)
     }
 }
 
