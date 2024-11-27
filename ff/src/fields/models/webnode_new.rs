@@ -1121,10 +1121,6 @@ impl<C: Fp256Parameters> FromBytes for NewFp256<C> {
         })
     }
 }
-    // + core::iter::Sum<Self>
-    // + for<'a> core::iter::Sum<&'a Self>
-    // + core::iter::Product<Self>
-    // + for<'a> core::iter::Product<&'a Self>
 
 impl<C: Fp256Parameters> Field for NewFp256<C> {
     type BasePrimeField = Self;
@@ -1150,9 +1146,8 @@ impl<C: Fp256Parameters> Field for NewFp256<C> {
         self
     }
     #[inline]
-    fn characteristic() -> &'static [u64] {
-        todo!()
-        // P::MODULUS.as_ref()
+    fn characteristic() -> &'static [u32] {
+        &C::MODULUS.0
     }
     #[inline]
     fn from_random_bytes_with_flags<F: Flags>(bytes: &[u8]) -> Option<(Self, F)> {
