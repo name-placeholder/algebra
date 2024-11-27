@@ -190,8 +190,8 @@ const fn gte_modulus<C: Fp256Parameters>(x: &Inner) -> bool {
     true
 }
 
-const fn conditional_reduce<C: Fp256Parameters>(x: &mut Inner) {
-    if gte_modulus::<C>(x) {
+const fn conditional_reduce<C: Fp256Parameters>(mut x: Inner) -> Inner {
+    if gte_modulus::<C>(&x) {
         let mut i = 0;
         while i < 9 {
         // for i in 0..9 {
@@ -211,6 +211,7 @@ const fn conditional_reduce<C: Fp256Parameters>(x: &mut Inner) {
             i += 1;
         }
     }
+    x
 }
 
 fn add_assign<C: Fp256Parameters>(x: &mut Inner, y: &Inner) {
@@ -413,7 +414,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
         modulus64
     };
 
-    const fn mul_without_reduce(mut self, other: &Self, _modulus: &Inner, _inv: u32) -> Self {
+    const fn mul_without_reduce(self, other: &Self, _modulus: &Inner, _inv: u32) -> Self {
 
         // const N: usize = 9;
 
@@ -422,7 +423,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
         // how much j steps we can do before a carry:
         let n_safe_steps = 2u64.pow(64 - 2 * SHIFT - 1) as usize;
 
-        let x = &mut self.0.0;
+        let mut x = self.0.0;
         let y = &other.0.0;
         // let y_local = other.0.0;
 
@@ -535,7 +536,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
             // dbg!(did_carry, do_carry);
 
             if do_carry {
-                // todo!();
+                todo!();
             } else {
                 // xy[j - 1] = add_mul(xi * y_local[j], qi, U64_MODULUS[j]);
                 xy[j - 1] = (xi * y_local[j]) + (qi * Self::U64_MODULUS[j]);
@@ -565,7 +566,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
         }
         x[Self::NLIMBS - 1] = xy[Self::NLIMBS - 1] as u32;
 
-        self
+        Self(BigInteger256(x), PhantomData)
     }
 
     const fn const_mul(mut self, other: &Self, modulus: &Inner, inv: u32) -> Self {
@@ -573,12 +574,12 @@ impl<C: Fp256Parameters> NewFp256<C> {
         self.const_reduce(modulus)
     }
 
-    const fn const_reduce(mut self, _modulus: &Inner) -> Self {
-        conditional_reduce::<C>(&mut self.0);
+    const fn const_reduce(self, _modulus: &Inner) -> Self {
+        let reduced = conditional_reduce::<C>(self.0);
+        Self(reduced, PhantomData)
         // if !self.const_is_valid(modulus) {
         //     self.0 = Self::sub_noborrow(&self.0, &modulus);
         // }
-        self
     }
 
     // don't fix warning -- that makes it 15% slower!
