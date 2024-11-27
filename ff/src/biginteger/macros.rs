@@ -363,7 +363,8 @@ macro_rules! bigint_impl {
 
         impl Distribution<$name> for Standard {
             fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> $name {
-                $name(rng.gen())
+                let rand: [u64; 4] = rng.gen();
+                $name::from_64x4(rand)
             }
         }
 

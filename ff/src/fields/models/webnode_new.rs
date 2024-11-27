@@ -1,3 +1,5 @@
+use core::convert::TryInto;
+
 use crate::{
     biginteger::{
         arithmetic as fa, BigInteger as _BigInteger, BigInteger256,
@@ -180,10 +182,10 @@ const fn gte_modulus<C: Fp256Parameters>(x: &Inner) -> bool {
         } else if x.0[i] < C::MODULUS.0[i] {
             return false;
         }
-        i -= 1;
         if i == 0 {
             break;
         }
+        i -= 1;
     }
     true
 }
@@ -238,8 +240,33 @@ fn add_assign<C: Fp256Parameters>(x: &mut Inner, y: &Inner) {
 // struct Inner([u32; 9]);
 type Inner = BigInteger256;
 
-#[derive(Clone, Copy, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Default, Eq, PartialEq, Hash)]
 pub struct NewFp256<C: Fp256Parameters> (pub Inner, PhantomData<C>);
+
+/// Note that this implementation of `Ord` compares field elements viewing
+/// them as integers in the range 0, 1, ..., P::MODULUS - 1. However, other
+/// implementations of `PrimeField` might choose a different ordering, and
+/// as such, users should use this `Ord` for applications where
+/// any ordering suffices (like in a BTreeMap), and not in applications
+/// where a particular ordering is required.
+impl<P: Fp256Parameters> Ord for NewFp256<P> {
+    #[inline(always)]
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.into_repr().cmp(&other.into_repr())
+    }
+}
+/// Note that this implementation of `PartialOrd` compares field elements viewing
+/// them as integers in the range 0, 1, ..., `P::MODULUS` - 1. However, other
+/// implementations of `PrimeField` might choose a different ordering, and
+/// as such, users should use this `PartialOrd` for applications where
+/// any ordering suffices (like in a BTreeMap), and not in applications
+/// where a particular ordering is required.
+impl<P: Fp256Parameters> PartialOrd for NewFp256<P> {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 impl<C: Fp256Parameters> Display for NewFp256<C> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
@@ -253,7 +280,14 @@ impl<C: Fp256Parameters> ark_std::fmt::Debug for NewFp256<C> {
         let r: BigInteger256 = self.into_repr();
         let bigint: num_bigint::BigUint = r.into();
         let s = bigint.to_string();
-        f.write_fmt(format_args!("Fp({})", s))
+
+        let name = match C::T.0[0] {
+            0x192d30ed => "Fp",
+            0xc46eb21 => "Fq",
+            _ => panic!(),
+        };
+
+        f.write_fmt(format_args!("{}({})", name, s))
     }
 }
 
@@ -316,15 +350,13 @@ impl<C: Fp256Parameters> NewFp256<C> {
         modulus: Inner,
         inv: u64,
     ) -> Self {
-        let mut repr = BigInteger256([0; 9]);
-        let mut i = 0;
-        let mut j = 0;
-        while i < limbs.len() {
-            repr.0[j] = limbs[i] as u32;
-            repr.0[j + 1] = (limbs[i] >> 32) as u32;
-            i += 1;
-            j += 2;
-        }
+        let repr = match limbs {
+            [a, b, c, d] => BigInteger256::from_64x4([*a, *b, *c, *d]),
+            [a, b, c] => BigInteger256::from_64x4([*a, *b, *c, 0]),
+            [a, b] => BigInteger256::from_64x4([*a, *b, 0, 0]),
+            [a] => BigInteger256::from_64x4([*a, 0, 0, 0]),
+            _ => BigInteger256::from_64x4([0, 0, 0, 0])
+        };
         let res = Self::const_from_repr(repr, r2, modulus, inv as u32);
         if is_positive {
             res
@@ -794,16 +826,15 @@ impl<C: Fp256Parameters> CanonicalSerializeWithFlags for NewFp256<C> {
         mut writer: W,
         flags: F,
     ) -> Result<(), SerializationError> {
-        todo!()
-        // if F::BIT_SIZE > 8 {
-        //     return Err(SerializationError::NotEnoughSpace);
-        // }
-        // let output_byte_size = buffer_byte_size(P::MODULUS_BITS as usize + F::BIT_SIZE);
-        // let mut bytes = [0u8; 4 * 8 + 1];
-        // self.write(&mut bytes[..4 * 8])?;
-        // bytes[output_byte_size - 1] |= flags.u8_bitmask();
-        // writer.write_all(&bytes[..output_byte_size])?;
-        // Ok(())
+        if F::BIT_SIZE > 8 {
+            return Err(SerializationError::NotEnoughSpace);
+        }
+        let output_byte_size = buffer_byte_size(C::MODULUS_BITS as usize + F::BIT_SIZE);
+        let mut bytes = [0u8; 4 * 8 + 1];
+        self.write(&mut bytes[..4 * 8])?;
+        bytes[output_byte_size - 1] |= flags.u8_bitmask();
+        writer.write_all(&bytes[..output_byte_size])?;
+        Ok(())
     }
     fn serialized_size_with_flags<F: Flags>(&self) -> usize {
         todo!()
@@ -822,16 +853,15 @@ impl<C: Fp256Parameters> CanonicalDeserializeWithFlags for NewFp256<C> {
     fn deserialize_with_flags<R: ark_std::io::Read, F: Flags>(
         mut reader: R,
     ) -> Result<(Self, F), SerializationError> {
-        todo!()
-        // if F::BIT_SIZE > 8 {
-        //     return Err(SerializationError::NotEnoughSpace);
-        // }
-        // let output_byte_size = buffer_byte_size(P::MODULUS_BITS as usize + F::BIT_SIZE);
-        // let mut masked_bytes = [0; 4 * 8 + 1];
-        // reader.read_exact(&mut masked_bytes[..output_byte_size])?;
-        // let flags = F::from_u8_remove_flags(&mut masked_bytes[output_byte_size - 1])
-        //     .ok_or(SerializationError::UnexpectedFlags)?;
-        // Ok((Self::read(&masked_bytes[..])?, flags))
+        if F::BIT_SIZE > 8 {
+            return Err(SerializationError::NotEnoughSpace);
+        }
+        let output_byte_size = buffer_byte_size(C::MODULUS_BITS as usize + F::BIT_SIZE);
+        let mut masked_bytes = [0; 4 * 8 + 1];
+        reader.read_exact(&mut masked_bytes[..output_byte_size])?;
+        let flags = F::from_u8_remove_flags(&mut masked_bytes[output_byte_size - 1])
+            .ok_or(SerializationError::UnexpectedFlags)?;
+        Ok((Self::read(&masked_bytes[..])?, flags))
     }
 }
 impl<C: Fp256Parameters> CanonicalDeserialize for NewFp256<C> {
@@ -937,8 +967,50 @@ impl<C: Fp256Parameters + 'static + Send + Sync + Sized> PrimeField for NewFp256
     #[inline]
     #[allow(clippy::modulo_one)]
     fn into_repr(&self) -> BigInteger256 {
+
+        // let mut tmp = self.0;
+        // let mut r = tmp.0;
+        // // Montgomery Reduction
+        // for i in 0..$limbs {
+        //     let k = r[i].wrapping_mul(P::INV);
+        //     let mut carry = 0;
+        //     mac_with_carry!(r[i], k, P::MODULUS.0[0], &mut carry);
+        //     for j in 1..$limbs {
+        //         r[(j + i) % $limbs] =
+        //             mac_with_carry!(r[(j + i) % $limbs], k, P::MODULUS.0[j], &mut carry);
+        //     }
+        //     r[i % $limbs] = carry;
+        // }
+        // tmp.0 = r;
+        // tmp
+
+        // let mut tmp = self.0.to_64x4();
+        // let mut r = tmp;
+        // // Montgomery Reduction
+        // for i in 0..4 {
+        //     let k = r[i].wrapping_mul(C::INV);
+        //     let mut carry = 0;
+        //     mac_with_carry!(r[i], k, C::MODULUS.0[0] as _, &mut carry);
+        //     for j in 1..4 {
+        //         r[(j + i) % 4] =
+        //             mac_with_carry!(r[(j + i) % 4], k, C::MODULUS.0[j], &mut carry);
+        //     }
+        //     r[i % 4] = carry;
+        // }
+        // tmp = r;
+        // tmp
+
+        // todo!()
+
+        // eprintln!("AAAA={:?}", self.0.to_64x4());
+
+        // let mut this = self.clone();
         let one = BigInteger256([1, 0, 0, 0, 0, 0, 0, 0, 0]);
+        // this.mul_assign(&Self(one, PhantomData));
+        // this.0
+        // self.mul_without_reduce(&Self(one, PhantomData), &Default::default(), Default::default()).0
         self.mul(Self(one, PhantomData)).0
+        // self.mul(Self::from(1u64)).0
     }
 }
 
@@ -1083,7 +1155,35 @@ impl<C: Fp256Parameters> Field for NewFp256<C> {
     }
     #[inline]
     fn from_random_bytes_with_flags<F: Flags>(bytes: &[u8]) -> Option<(Self, F)> {
-        todo!()
+        if F::BIT_SIZE > 8 {
+            return None;
+        } else {
+            let mut result_bytes = [0u8; 4 * 8 + 1];
+            result_bytes
+                .iter_mut()
+                .zip(bytes)
+                .for_each(|(result, input)| {
+                    *result = *input;
+                });
+            let last_limb_mask = (u64::MAX >> C::REPR_SHAVE_BITS).to_le_bytes();
+            let mut last_bytes_mask = [0u8; 9];
+            last_bytes_mask[..8].copy_from_slice(&last_limb_mask);
+            let output_byte_size = buffer_byte_size(C::MODULUS_BITS as usize + F::BIT_SIZE);
+            let flag_location = output_byte_size - 1;
+            let flag_location_in_last_limb = flag_location - (8 * (4 - 1));
+            let last_bytes = &mut result_bytes[8 * (4 - 1)..];
+            let flags_mask = u8::MAX.checked_shl(8 - (F::BIT_SIZE as u32)).unwrap_or(0);
+            let mut flags: u8 = 0;
+            for (i, (b, m)) in last_bytes.iter_mut().zip(&last_bytes_mask).enumerate() {
+                if i == flag_location_in_last_limb {
+                    flags = *b & flags_mask;
+                }
+                *b &= m;
+            }
+            Self::deserialize(&result_bytes[..(4 * 8)])
+                .ok()
+                .and_then(|f| F::from_u8(flags).map(|flag| (f, flag)))
+        }
     }
     #[inline]
     fn square(&self) -> Self {
@@ -1163,67 +1263,91 @@ impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<NewFp256<C>>
     #[inline]
     fn sample<R: ark_std::rand::Rng + ?Sized>(&self, rng: &mut R) -> NewFp256<C> {
         loop {
-            let mut tmp = NewFp256(
-                rng.sample(ark_std::rand::distributions::Standard),
-                PhantomData,
-            );
-            if !(C::REPR_SHAVE_BITS <= 32) {
-                panic!("assertion failed: P::REPR_SHAVE_BITS <= 32")
+            if !(C::REPR_SHAVE_BITS <= 64) {
+                panic!("assertion failed: P::REPR_SHAVE_BITS <= 64")
             }
-            let mask = if C::REPR_SHAVE_BITS == 32 {
+            let mask = if C::REPR_SHAVE_BITS == 64 {
                 0
             } else {
-                core::u32::MAX >> C::REPR_SHAVE_BITS
+                core::u64::MAX >> C::REPR_SHAVE_BITS
             };
-            tmp.0.0.as_mut().last_mut().map(|val| *val &= mask);
-            if tmp.is_valid() {
-                return tmp;
-            }
+
+            let mut tmp: [u64; 4] = rng.sample(ark_std::rand::distributions::Standard);
+            tmp.as_mut().last_mut().map(|val| *val &= mask);
+
+                 let is_fp = match C::T.0[0] {
+                     0x192d30ed => true,
+                     0xc46eb21 => false,
+                     _ => panic!(),
+                 };
+
+                 const FP_MODULUS: [u64; 4] = [
+                     0x992d30ed00000001,
+                     0x224698fc094cf91b,
+                     0x0,
+                     0x4000000000000000,
+                 ];
+                 const FQ_MODULUS: [u64; 4] = [
+                     0x8c46eb2100000001,
+                     0x224698fc0994a8dd,
+                     0x0,
+                     0x4000000000000000,
+                 ];
+
+                 let (modulus, inv) = if is_fp {
+                     (FP_MODULUS, 11037532056220336127)
+                 } else {
+                     (FQ_MODULUS, 10108024940646105087)
+                 };
+
+                 let is_valid = || {
+                     for (random, modulus) in tmp.iter().copied().zip(modulus).rev() {
+                         if random > modulus {
+                             return false;
+                         } else if random < modulus {
+                             return true;
+                         }
+                     }
+                     false
+                 };
+
+                 if !is_valid() {
+                     continue;
+                 }
+
+                 let mut r = tmp;
+                 // Montgomery Reduction
+                 for i in 0..4 {
+                     let k = r[i].wrapping_mul(inv);
+                     let mut carry = 0;
+                     mac_with_carry!(r[i], k, modulus[0] as _, &mut carry);
+                     for j in 1..4 {
+                         r[(j + i) % 4] =
+                             mac_with_carry!(r[(j + i) % 4], k, modulus[j], &mut carry);
+                     }
+                     r[i % 4] = carry;
+                 }
+                 tmp = r;
+
+                 return NewFp256::<C>::from_repr(BigInteger256::from_64x4(tmp)).unwrap();
         }
     }
 }
 
 pub struct NewFpParameters;
 
-// impl Fp256Parameters for NewFpParameters {}
-
-// impl crate::FftParameters for NewFpParameters {
-//     type BigInt = BigInteger256;
-
-//     const TWO_ADICITY: u32 = 32;
-
-//     #[rustfmt::skip]
-//     const TWO_ADIC_ROOT_OF_UNITY: BigInteger256 = BigInteger256([
-//         450288624,
-//         342737485,
-//         223246312,
-//         127535015,
-//         71887112,
-//         484789988,
-//         460058266,
-//         244281656,
-//         4114728,
-//     ]);
-//     // [
-//     //        0xa28db849bad6dbf0, 0x9083cd03d3b539df, 0xfba6b9ca9dc8448e, 0x3ec928747b89c6da
-//     //    ]
-// }
-
 impl<C: Fp256Parameters> zeroize::DefaultIsZeroes for NewFp256<C> {}
 
 impl<C: Fp256Parameters> FftField for NewFp256<C> {
     type FftParams = C;
     fn two_adic_root_of_unity() -> Self {
-        todo!()
-        // Fp256::<P>(P::TWO_ADIC_ROOT_OF_UNITY, PhantomData)
+        NewFp256::<C>(C::TWO_ADIC_ROOT_OF_UNITY, PhantomData)
     }
     fn large_subgroup_root_of_unity() -> Option<Self> {
-        todo!()
-        // Some(Fp256::<P>(P::LARGE_SUBGROUP_ROOT_OF_UNITY?, PhantomData))
+        Some(NewFp256::<C>(C::LARGE_SUBGROUP_ROOT_OF_UNITY?, PhantomData))
     }
     fn multiplicative_generator() -> Self {
-        todo!()
-        // Fp256::<P>(P::GENERATOR, PhantomData)
+        NewFp256::<C>(C::GENERATOR, PhantomData)
     }
 }
 
@@ -1232,14 +1356,8 @@ impl<C: Fp256Parameters> SquareRootField for NewFp256<C> {
     fn legendre(&self) -> LegendreSymbol {
         use crate::fields::LegendreSymbol::*;
 
-        const MODULUS_MINUS_ONE_DIV_TWO: [u64; 4] = [
-            0xcc96987680000000,
-            0x11234c7e04a67c8d,
-            0x0,
-            0x2000000000000000,
-        ];
-
-        let s = self.pow(MODULUS_MINUS_ONE_DIV_TWO);
+        let modulus_minus_one_div_two = C::MODULUS_MINUS_ONE_DIV_TWO.to_64x4();
+        let s = self.pow(modulus_minus_one_div_two);
         if s.is_zero() {
             Zero
         } else if s.is_one() {
@@ -1251,16 +1369,13 @@ impl<C: Fp256Parameters> SquareRootField for NewFp256<C> {
     #[inline]
     fn sqrt(&self) -> Option<Self> {
         {
-            use crate::FftParameters;
-
-            const T_MINUS_ONE_DIV_TWO: [u64; 4] =
-                [0x4a67c8dcc969876, 0x11234c7e, 0x0, 0x20000000];
+            let t_minus_one_div_two = C::T_MINUS_ONE_DIV_TWO.to_64x4();
 
             if self.is_zero() {
                 return Some(Self::zero());
             }
             let mut z = Self::qnr_to_t();
-            let mut w = self.pow(T_MINUS_ONE_DIV_TWO);
+            let mut w = self.pow(t_minus_one_div_two);
             let mut x = w * self;
             let mut b = x * &w;
             let mut v = C::TWO_ADICITY as usize;

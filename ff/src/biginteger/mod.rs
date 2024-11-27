@@ -1,7 +1,5 @@
 use crate::{
-    bytes::{FromBytes, ToBytes},
-    fields::{BitIteratorBE, BitIteratorLE},
-    UniformRand,
+    bytes::{FromBytes, ToBytes}, fields::{BitIteratorBE, BitIteratorLE}, UniformRand
 };
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, SerializationError};
 use ark_std::rand::{
@@ -139,16 +137,15 @@ pub trait BigInteger:
     /// Returns the bit representation in a big endian boolean array,
     /// with leading zeroes.
     fn to_bits_be(&self) -> Vec<bool> {
-        todo!()
-        // let slice = to_64x4(self.0);
-        // BitIteratorBE::new(self).collect::<Vec<_>>()
+        let this = self.to_64x4();
+        BitIteratorBE::new(this).collect::<Vec<_>>()
     }
 
     /// Returns the bit representation in a little endian boolean array,
     /// with trailing zeroes.
     fn to_bits_le(&self) -> Vec<bool> {
-        todo!()
-        // BitIteratorLE::new(self).collect::<Vec<_>>()
+        let this = self.to_64x4();
+        BitIteratorLE::new(this).collect::<Vec<_>>()
     }
 
     /// Returns the byte representation in a big endian byte array,
