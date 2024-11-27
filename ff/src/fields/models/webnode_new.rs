@@ -572,6 +572,53 @@ impl<C: Fp256Parameters> NewFp256<C> {
         }
         false
     }
+
+    #[ark_ff_asm::unroll_for_loops]
+    fn const_square(&mut self) {
+        let mut x = [0u64; 9];
+        for i in 0..9 {
+            x[i] = self.0.0[i] as u64;
+        }
+        let mut xy = [0u64; 9];
+        for i in 0..9 {
+            let j = 0;
+            let tmp = if i == 0 {
+                x[i] * x[j]
+            } else {
+                ((x[i] * x[j]) << 1) + xy[j]
+            };
+            let qi = (MASK64 + 1) - (tmp & MASK64);
+            let carry = (tmp + (qi * Self::U64_MODULUS[0])) >> SHIFT64;
+            for j in 1..8 {
+                let did_carry = j == 1;
+                let mut xy_j = xy[j];
+                if did_carry {
+                    xy_j += carry;
+                }
+                if j <= i {
+                    let mut tmp = x[i] * x[j];
+                    if j < i {
+                       tmp <<= 1;
+                    }
+                    xy_j += tmp;
+                }
+                xy[j - 1] = xy_j + (qi * Self::U64_MODULUS[j]);
+            }
+            let j = 8;
+            xy[j - 1] = if i == j {
+                (x[i] * x[j]) + (qi * Self::U64_MODULUS[j])
+            } else {
+                qi * Self::U64_MODULUS[j]
+            };
+        }
+        for j in 1..9 {
+            self.0.0[j - 1] = (xy[j - 1] as u32) & MASK;
+            xy[j] += xy[j - 1] >> SHIFT64;
+        }
+        self.0.0[9 - 1] = xy[9 - 1] as u32;
+
+        self.const_reduce(&C::MODULUS);
+    }
 }
 
 impl<C: Fp256Parameters> NewFp256<C> {
@@ -1001,8 +1048,7 @@ impl<C: Fp256Parameters> Field for NewFp256<C> {
     #[inline]
     #[allow(unused_braces, clippy::absurd_extreme_comparisons)]
     fn square_in_place(&mut self) -> &mut Self {
-        let this = self.clone();
-        self.mul_assign(&this);
+        self.const_square();
         self
     }
     #[inline]
