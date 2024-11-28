@@ -476,6 +476,7 @@ impl<Slice: AsRef<[u64]>> BitIteratorBE<Slice> {
         let n = s.as_ref().len() * 64;
         BitIteratorBE { s, n }
     }
+
     /// Construct an iterator that automatically skips any leading zeros.
     /// That is, it skips all zeros before the most-significant one.
     pub fn without_leading_zeros(s: Slice) -> impl Iterator<Item = bool> {
@@ -513,6 +514,7 @@ impl<Slice: AsRef<[u64]>> BitIteratorLE<Slice> {
         let max_len = s.as_ref().len() * 64;
         BitIteratorLE { s, n, max_len }
     }
+
     /// Construct an iterator that automatically skips any trailing zeros.
     /// That is, it skips all zeros after the most-significant one.
     pub fn without_trailing_zeros(s: Slice) -> impl Iterator<Item = bool> {
@@ -531,6 +533,7 @@ impl<Slice: AsRef<[u64]>> BitIteratorLE<Slice> {
 
 impl<Slice: AsRef<[u64]>> Iterator for BitIteratorLE<Slice> {
     type Item = bool;
+
     fn next(&mut self) -> Option<bool> {
         if self.n == self.max_len {
             None
@@ -538,6 +541,7 @@ impl<Slice: AsRef<[u64]>> Iterator for BitIteratorLE<Slice> {
             let part = self.n / 64;
             let bit = self.n - (64 * part);
             self.n += 1;
+
             Some(self.s.as_ref()[part] & (1 << bit) > 0)
         }
     }
