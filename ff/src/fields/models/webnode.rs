@@ -16,12 +16,12 @@ use ark_std::{
     str::FromStr, One, Zero,
 };
 
-impl<C: Fp256Parameters> Into<BigInteger256> for NewFp256<C> {
+impl<C: Fp256Parameters> Into<BigInteger256> for Fp256<C> {
     fn into(self) -> BigInteger256 {
         self.into_repr()
     }
 }
-impl<C: Fp256Parameters> core::convert::TryFrom<BigInteger256> for NewFp256<C> {
+impl<C: Fp256Parameters> core::convert::TryFrom<BigInteger256> for Fp256<C> {
     type Error = crate::fields::arithmetic::InvalidBigInt;
 
     /// Converts `Self::BigInteger` into `Self`
@@ -69,7 +69,7 @@ pub const fn to_64x4(pa: [u32; 9]) -> [u64; 4] {
 }
 
 const fn gte_modulus<C: Fp256Parameters>(x: &BigInteger256) -> bool {
-    let mut i = NewFp256::<C>::NLIMBS - 1;
+    let mut i = Fp256::<C>::NLIMBS - 1;
     loop {
         // don't fix warning -- that makes it 15% slower!
         #[allow(clippy::comparison_chain)]
@@ -125,7 +125,7 @@ fn add_assign<C: Fp256Parameters>(x: &mut BigInteger256, y: &BigInteger256) {
 }
 
 #[derive(Clone, Copy, Default, Eq, PartialEq, Hash)]
-pub struct NewFp256<C: Fp256Parameters> (pub BigInteger256, PhantomData<C>);
+pub struct Fp256<C: Fp256Parameters> (pub BigInteger256, PhantomData<C>);
 
 /// Note that this implementation of `Ord` compares field elements viewing
 /// them as integers in the range 0, 1, ..., P::MODULUS - 1. However, other
@@ -133,7 +133,7 @@ pub struct NewFp256<C: Fp256Parameters> (pub BigInteger256, PhantomData<C>);
 /// as such, users should use this `Ord` for applications where
 /// any ordering suffices (like in a BTreeMap), and not in applications
 /// where a particular ordering is required.
-impl<P: Fp256Parameters> Ord for NewFp256<P> {
+impl<P: Fp256Parameters> Ord for Fp256<P> {
     #[inline(always)]
     fn cmp(&self, other: &Self) -> Ordering {
         self.into_repr().cmp(&other.into_repr())
@@ -145,20 +145,20 @@ impl<P: Fp256Parameters> Ord for NewFp256<P> {
 /// as such, users should use this `PartialOrd` for applications where
 /// any ordering suffices (like in a BTreeMap), and not in applications
 /// where a particular ordering is required.
-impl<P: Fp256Parameters> PartialOrd for NewFp256<P> {
+impl<P: Fp256Parameters> PartialOrd for Fp256<P> {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl<C: Fp256Parameters> Display for NewFp256<C> {
+impl<C: Fp256Parameters> Display for Fp256<C> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         f.write_fmt(format_args!("{:?}", self.0))
     }
 }
 
-impl<C: Fp256Parameters> ark_std::fmt::Debug for NewFp256<C> {
+impl<C: Fp256Parameters> ark_std::fmt::Debug for Fp256<C> {
     fn fmt(&self, f: &mut ark_std::fmt::Formatter<'_>) -> ark_std::fmt::Result {
         use crate::ark_std::string::ToString;
         let r: BigInteger256 = self.into_repr();
@@ -175,7 +175,7 @@ impl<C: Fp256Parameters> ark_std::fmt::Debug for NewFp256<C> {
     }
 }
 
-impl<C: Fp256Parameters> NewFp256<C> {
+impl<C: Fp256Parameters> Fp256<C> {
     const NLIMBS: usize = 9;
 
     #[inline]
@@ -257,7 +257,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
         if r.const_is_zero() {
             r
         } else {
-            r.const_mul(&NewFp256(r2, PhantomData), &modulus, inv);
+            r.const_mul(&Fp256(r2, PhantomData), &modulus, inv);
             r
         }
     }
@@ -324,7 +324,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
     // don't fix warning -- that makes it 15% slower!
     #[allow(clippy::comparison_chain)]
     const fn const_is_valid(&self, _modulus: &BigInteger256) -> bool {
-        let mut i = NewFp256::<C>::NLIMBS - 1;
+        let mut i = Fp256::<C>::NLIMBS - 1;
         loop {
             if self.0.0[i] > C::MODULUS.0[i] {
                 return false;
@@ -387,7 +387,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
     }
 }
 
-impl<C: Fp256Parameters> NewFp256<C> {
+impl<C: Fp256Parameters> Fp256<C> {
     pub(crate) fn is_valid(&self) -> bool {
         self.const_is_valid(&C::MODULUS)
     }
@@ -396,7 +396,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
     }
 }
 
-impl<C: Fp256Parameters> Zero for NewFp256<C> {
+impl<C: Fp256Parameters> Zero for Fp256<C> {
     fn zero() -> Self {
         Self(BigInteger256([0; 9]), PhantomData)
     }
@@ -405,7 +405,7 @@ impl<C: Fp256Parameters> Zero for NewFp256<C> {
     }
 }
 
-impl<C: Fp256Parameters> One for NewFp256<C> {
+impl<C: Fp256Parameters> One for Fp256<C> {
     fn one() -> Self {
         Self(C::R, PhantomData)
     }
@@ -414,63 +414,63 @@ impl<C: Fp256Parameters> One for NewFp256<C> {
     }
 }
 
-impl<C: Fp256Parameters> Neg for NewFp256<C> {
+impl<C: Fp256Parameters> Neg for Fp256<C> {
     type Output = Self;
     #[must_use]
     fn neg(self) -> Self {
         if !self.is_zero() {
             let mut tmp = C::MODULUS;
             tmp.sub_noborrow(&self.0);
-            NewFp256(tmp, PhantomData)
+            Fp256(tmp, PhantomData)
         } else {
             self
         }
     }
 }
-impl<C: Fp256Parameters> core::ops::DivAssign<Self> for NewFp256<C> {
+impl<C: Fp256Parameters> core::ops::DivAssign<Self> for Fp256<C> {
     fn div_assign(&mut self, other: Self) {
         self.div_assign(&other)
     }
 }
-impl<C: Fp256Parameters> Add<Self> for NewFp256<C> {
+impl<C: Fp256Parameters> Add<Self> for Fp256<C> {
     type Output = Self;
     fn add(mut self, other: Self) -> Self {
         self.add_assign(other);
         self
     }
 }
-impl<C: Fp256Parameters> Sub<Self> for NewFp256<C> {
+impl<C: Fp256Parameters> Sub<Self> for Fp256<C> {
     type Output = Self;
     fn sub(mut self, other: Self) -> Self {
         self.sub_assign(other);
         self
     }
 }
-impl<C: Fp256Parameters> Div<Self> for NewFp256<C> {
+impl<C: Fp256Parameters> Div<Self> for Fp256<C> {
     type Output = Self;
     fn div(mut self, other: Self) -> Self {
         self.div_assign(other);
         self
     }
 }
-impl<C: Fp256Parameters> core::ops::AddAssign<Self> for NewFp256<C> {
+impl<C: Fp256Parameters> core::ops::AddAssign<Self> for Fp256<C> {
     fn add_assign(&mut self, other: Self) {
         add_assign::<C>(&mut self.0, &other.0)
     }
 }
-impl<C: Fp256Parameters> Mul<Self> for NewFp256<C> {
+impl<C: Fp256Parameters> Mul<Self> for Fp256<C> {
     type Output = Self;
     fn mul(mut self, other: Self) -> Self {
         self.mul_assign(other);
         self
     }
 }
-impl<C: Fp256Parameters> core::ops::MulAssign<Self> for NewFp256<C> {
+impl<C: Fp256Parameters> core::ops::MulAssign<Self> for Fp256<C> {
     fn mul_assign(&mut self, other: Self) {
         self.const_mul(&other, &C::MODULUS, C::INV as u32);
     }
 }
-impl<C: Fp256Parameters> SubAssign<Self> for NewFp256<C> {
+impl<C: Fp256Parameters> SubAssign<Self> for Fp256<C> {
     fn sub_assign(&mut self, other: Self) {
         if other.0 > self.0 {
             self.0.add_nocarry(&C::MODULUS);
@@ -478,30 +478,30 @@ impl<C: Fp256Parameters> SubAssign<Self> for NewFp256<C> {
         self.0.sub_noborrow(&other.0);
     }
 }
-impl<C: Fp256Parameters> core::iter::Sum<Self> for NewFp256<C> {
+impl<C: Fp256Parameters> core::iter::Sum<Self> for Fp256<C> {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.fold(Self::zero(), core::ops::Add::add)
     }
 }
-impl<C: Fp256Parameters> core::iter::Product<Self> for NewFp256<C> {
+impl<C: Fp256Parameters> core::iter::Product<Self> for Fp256<C> {
     fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.fold(Self::one(), Mul::mul)
     }
 }
 
-impl<'a, C: Fp256Parameters> Div<&'a Self> for NewFp256<C> {
+impl<'a, C: Fp256Parameters> Div<&'a Self> for Fp256<C> {
     type Output = Self;
     fn div(mut self, other: &'a Self) -> Self {
         self.div_assign(other);
         self
     }
 }
-impl<'a, C: Fp256Parameters> DivAssign<&'a Self> for NewFp256<C> {
+impl<'a, C: Fp256Parameters> DivAssign<&'a Self> for Fp256<C> {
     fn div_assign(&mut self, other: &'a Self) {
         self.mul_assign(&other.inverse().unwrap());
     }
 }
-impl<'a, C: Fp256Parameters> SubAssign<&'a Self> for NewFp256<C> {
+impl<'a, C: Fp256Parameters> SubAssign<&'a Self> for Fp256<C> {
     fn sub_assign(&mut self, other: &'a Self) {
         if other.0 > self.0 {
             self.0.add_nocarry(&C::MODULUS);
@@ -509,66 +509,66 @@ impl<'a, C: Fp256Parameters> SubAssign<&'a Self> for NewFp256<C> {
         self.0.sub_noborrow(&other.0);
     }
 }
-impl<'a, C: Fp256Parameters> Sub<&'a Self> for NewFp256<C> {
+impl<'a, C: Fp256Parameters> Sub<&'a Self> for Fp256<C> {
     type Output = Self;
     fn sub(mut self, other: &'a Self) -> Self {
         self.sub_assign(other);
         self
     }
 }
-impl<'a, C: Fp256Parameters> core::iter::Product<&'a Self> for NewFp256<C> {
+impl<'a, C: Fp256Parameters> core::iter::Product<&'a Self> for Fp256<C> {
     fn product<I: Iterator<Item = &'a Self>>(iter: I) -> Self {
         iter.fold(Self::one(), Mul::mul)
     }
 }
-impl<'a, C: Fp256Parameters> core::iter::Sum<&'a Self> for NewFp256<C> {
+impl<'a, C: Fp256Parameters> core::iter::Sum<&'a Self> for Fp256<C> {
     fn sum<I: Iterator<Item = &'a Self>>(iter: I) -> Self {
         iter.fold(Self::zero(), core::ops::Add::add)
     }
 }
-impl<'a, C: Fp256Parameters> Add<&'a Self> for NewFp256<C> {
+impl<'a, C: Fp256Parameters> Add<&'a Self> for Fp256<C> {
     type Output = Self;
     fn add(mut self, other: &'a Self) -> Self {
         self.add_assign(other);
         self
     }
 }
-impl<'a, C: Fp256Parameters> core::ops::AddAssign<&'a Self> for NewFp256<C> {
+impl<'a, C: Fp256Parameters> core::ops::AddAssign<&'a Self> for Fp256<C> {
     fn add_assign(&mut self, other: &'a Self) {
         add_assign::<C>(&mut self.0, &other.0)
     }
 }
-impl<'a, C: Fp256Parameters> Mul<&'a Self> for NewFp256<C> {
+impl<'a, C: Fp256Parameters> Mul<&'a Self> for Fp256<C> {
     type Output = Self;
     fn mul(mut self, other: &'a Self) -> Self {
         self.mul_assign(other);
         self
     }
 }
-impl<'a, C: Fp256Parameters> core::ops::MulAssign<&'a Self> for NewFp256<C> {
+impl<'a, C: Fp256Parameters> core::ops::MulAssign<&'a Self> for Fp256<C> {
     fn mul_assign(&mut self, other: &'a Self) {
         self.const_mul(&other, &C::MODULUS, C::INV as u32)
     }
 }
 
-impl<C: Fp256Parameters> From<u128> for NewFp256<C> {
+impl<C: Fp256Parameters> From<u128> for Fp256<C> {
     fn from(value: u128) -> Self {
         let hi = (value >> 64) as u64;
         let lo = value as u64;
         Self::from_repr(BigInteger256(from_64x4([lo, hi, 0, 0]))).unwrap()
     }
 }
-impl<C: Fp256Parameters> From<u64> for NewFp256<C> {
+impl<C: Fp256Parameters> From<u64> for Fp256<C> {
     fn from(value: u64) -> Self {
         Self::from_repr(BigInteger256::from_64x4([value, 0, 0, 0])).unwrap()
     }
 }
-impl<C: Fp256Parameters> From<u32> for NewFp256<C> {
+impl<C: Fp256Parameters> From<u32> for Fp256<C> {
     fn from(value: u32) -> Self {
         Self::from_repr(BigInteger256::from_64x4([value as u64, 0, 0, 0])).unwrap()
     }
 }
-impl<C: Fp256Parameters> From<i64> for NewFp256<C> {
+impl<C: Fp256Parameters> From<i64> for Fp256<C> {
     fn from(value: i64) -> Self {
         let abs = Self::from(value.unsigned_abs());
         if value.is_positive() {
@@ -578,7 +578,7 @@ impl<C: Fp256Parameters> From<i64> for NewFp256<C> {
         }
     }
 }
-impl<C: Fp256Parameters> From<i32> for NewFp256<C> {
+impl<C: Fp256Parameters> From<i32> for Fp256<C> {
     fn from(value: i32) -> Self {
         let abs = Self::from(value.unsigned_abs());
         if value.is_positive() {
@@ -588,23 +588,23 @@ impl<C: Fp256Parameters> From<i32> for NewFp256<C> {
         }
     }
 }
-impl<C: Fp256Parameters> From<u16> for NewFp256<C> {
+impl<C: Fp256Parameters> From<u16> for Fp256<C> {
     fn from(value: u16) -> Self {
         Self::from_repr(BigInteger256::from_64x4([value as u64, 0, 0, 0])).unwrap()
     }
 }
-impl<C: Fp256Parameters> From<u8> for NewFp256<C> {
+impl<C: Fp256Parameters> From<u8> for Fp256<C> {
     fn from(value: u8) -> Self {
         Self::from_repr(BigInteger256::from_64x4([value as u64, 0, 0, 0])).unwrap()
     }
 }
-impl<C: Fp256Parameters> From<bool> for NewFp256<C> {
+impl<C: Fp256Parameters> From<bool> for Fp256<C> {
     fn from(value: bool) -> Self {
         Self::from_repr(BigInteger256::from_64x4([value as u64, 0, 0, 0])).unwrap()
     }
 }
 
-impl<C: Fp256Parameters> CanonicalSerializeWithFlags for NewFp256<C> {
+impl<C: Fp256Parameters> CanonicalSerializeWithFlags for Fp256<C> {
     fn serialize_with_flags<W: ark_std::io::Write, F: Flags>(
         &self,
         mut writer: W,
@@ -625,7 +625,7 @@ impl<C: Fp256Parameters> CanonicalSerializeWithFlags for NewFp256<C> {
         // buffer_byte_size(P::MODULUS_BITS as usize + F::BIT_SIZE)
     }
 }
-impl<C: Fp256Parameters> CanonicalSerialize for NewFp256<C> {
+impl<C: Fp256Parameters> CanonicalSerialize for Fp256<C> {
     fn serialize<W: ark_std::io::Write>(&self, writer: W) -> Result<(), SerializationError> {
         self.serialize_with_flags(writer, EmptyFlags)
     }
@@ -633,7 +633,7 @@ impl<C: Fp256Parameters> CanonicalSerialize for NewFp256<C> {
         self.serialized_size_with_flags::<EmptyFlags>()
     }
 }
-impl<C: Fp256Parameters> CanonicalDeserializeWithFlags for NewFp256<C> {
+impl<C: Fp256Parameters> CanonicalDeserializeWithFlags for Fp256<C> {
     fn deserialize_with_flags<R: ark_std::io::Read, F: Flags>(
         mut reader: R,
     ) -> Result<(Self, F), SerializationError> {
@@ -648,13 +648,13 @@ impl<C: Fp256Parameters> CanonicalDeserializeWithFlags for NewFp256<C> {
         Ok((Self::read(&masked_bytes[..])?, flags))
     }
 }
-impl<C: Fp256Parameters> CanonicalDeserialize for NewFp256<C> {
+impl<C: Fp256Parameters> CanonicalDeserialize for Fp256<C> {
     fn deserialize<R: ark_std::io::Read>(reader: R) -> Result<Self, SerializationError> {
         Self::deserialize_with_flags::<R, EmptyFlags>(reader).map(|(r, _)| r)
     }
 }
 
-impl<C: Fp256Parameters + 'static + Send + Sync + Sized> PrimeField for NewFp256<C> {
+impl<C: Fp256Parameters + 'static + Send + Sync + Sized> PrimeField for Fp256<C> {
     type Params = C;
     type BigInt = BigInteger256;
     #[inline]
@@ -677,18 +677,18 @@ impl<C: Fp256Parameters + 'static + Send + Sync + Sized> PrimeField for NewFp256
     }
 }
 
-impl<C: Fp256Parameters> From<num_bigint::BigUint> for NewFp256<C> {
+impl<C: Fp256Parameters> From<num_bigint::BigUint> for Fp256<C> {
     fn from(val: num_bigint::BigUint) -> Self {
         Self::from_le_bytes_mod_order(&val.to_bytes_le())
     }
 }
-impl<C: Fp256Parameters> Into<num_bigint::BigUint> for NewFp256<C> {
+impl<C: Fp256Parameters> Into<num_bigint::BigUint> for Fp256<C> {
     fn into(self) -> num_bigint::BigUint {
         self.into_repr().into()
     }
 }
 
-impl<C: Fp256Parameters> FromStr for NewFp256<C> {
+impl<C: Fp256Parameters> FromStr for Fp256<C> {
     type Err = ();
     /// Interpret a string of numbers as a (congruent) prime field element.
     /// Does not accept unnecessary leading zeroes or a blank string.
@@ -729,21 +729,21 @@ impl<C: Fp256Parameters> FromStr for NewFp256<C> {
     }
 }
 
-impl<C: Fp256Parameters> ToBytes for NewFp256<C> {
+impl<C: Fp256Parameters> ToBytes for Fp256<C> {
     fn write<W: Write>(&self, writer: W) -> IoResult<()> {
         self.into_repr().write(writer)
     }
 }
-impl<C: Fp256Parameters> FromBytes for NewFp256<C> {
+impl<C: Fp256Parameters> FromBytes for Fp256<C> {
     fn read<R: Read>(reader: R) -> IoResult<Self> {
-        BigInteger256::read(reader).and_then(|b| match NewFp256::from_repr(b) {
+        BigInteger256::read(reader).and_then(|b| match Fp256::from_repr(b) {
             Some(f) => Ok(f),
             None => Err(crate::error("FromBytes::read failed")),
         })
     }
 }
 
-impl<C: Fp256Parameters> Field for NewFp256<C> {
+impl<C: Fp256Parameters> Field for Fp256<C> {
     type BasePrimeField = Self;
     fn extension_degree() -> u64 {
         1
@@ -872,11 +872,11 @@ impl<C: Fp256Parameters> Field for NewFp256<C> {
 }
 
 #[cfg(not(test))]
-impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<NewFp256<C>>
+impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<Fp256<C>>
     for ark_std::rand::distributions::Standard
 {
     #[inline]
-    fn sample<R: ark_std::rand::Rng + ?Sized>(&self, rng: &mut R) -> NewFp256<C> {
+    fn sample<R: ark_std::rand::Rng + ?Sized>(&self, rng: &mut R) -> Fp256<C> {
         loop {
             if !(C::REPR_SHAVE_BITS <= 64) {
                 panic!("assertion failed: P::REPR_SHAVE_BITS <= 64")
@@ -890,7 +890,7 @@ impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<NewFp256<C>>
             let mut tmp: [u64; 4] = rng.sample(ark_std::rand::distributions::Standard);
             tmp.as_mut().last_mut().map(|val| *val &= mask);
 
-            let tmp = NewFp256(BigInteger256::from_64x4(tmp), PhantomData);
+            let tmp = Fp256(BigInteger256::from_64x4(tmp), PhantomData);
             if tmp.is_valid() {
                 return tmp;
             }
@@ -900,11 +900,11 @@ impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<NewFp256<C>>
 
 // During tests, we want to generate the same fields than on native (to test witness generation etc)
 #[cfg(test)]
-impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<NewFp256<C>>
+impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<Fp256<C>>
     for ark_std::rand::distributions::Standard
 {
     #[inline]
-    fn sample<R: ark_std::rand::Rng + ?Sized>(&self, rng: &mut R) -> NewFp256<C> {
+    fn sample<R: ark_std::rand::Rng + ?Sized>(&self, rng: &mut R) -> Fp256<C> {
         loop {
             if !(C::REPR_SHAVE_BITS <= 64) {
                 panic!("assertion failed: P::REPR_SHAVE_BITS <= 64")
@@ -963,29 +963,29 @@ impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<NewFp256<C>>
                 r[i % 4] = carry;
             }
             tmp = r;
-            return NewFp256::<C>::from_repr(BigInteger256::from_64x4(tmp)).unwrap();
+            return Fp256::<C>::from_repr(BigInteger256::from_64x4(tmp)).unwrap();
         }
     }
 }
 
 pub struct NewFpParameters;
 
-impl<C: Fp256Parameters> zeroize::DefaultIsZeroes for NewFp256<C> {}
+impl<C: Fp256Parameters> zeroize::DefaultIsZeroes for Fp256<C> {}
 
-impl<C: Fp256Parameters> FftField for NewFp256<C> {
+impl<C: Fp256Parameters> FftField for Fp256<C> {
     type FftParams = C;
     fn two_adic_root_of_unity() -> Self {
-        NewFp256::<C>(C::TWO_ADIC_ROOT_OF_UNITY, PhantomData)
+        Fp256::<C>(C::TWO_ADIC_ROOT_OF_UNITY, PhantomData)
     }
     fn large_subgroup_root_of_unity() -> Option<Self> {
-        Some(NewFp256::<C>(C::LARGE_SUBGROUP_ROOT_OF_UNITY?, PhantomData))
+        Some(Fp256::<C>(C::LARGE_SUBGROUP_ROOT_OF_UNITY?, PhantomData))
     }
     fn multiplicative_generator() -> Self {
-        NewFp256::<C>(C::GENERATOR, PhantomData)
+        Fp256::<C>(C::GENERATOR, PhantomData)
     }
 }
 
-impl<C: Fp256Parameters> SquareRootField for NewFp256<C> {
+impl<C: Fp256Parameters> SquareRootField for Fp256<C> {
     #[inline]
     fn legendre(&self) -> LegendreSymbol {
         use crate::fields::LegendreSymbol::*;
