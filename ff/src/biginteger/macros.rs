@@ -53,24 +53,6 @@ macro_rules! bigint_impl {
                 }
                 *self = Self::from_64x4(this);
                 borrow != 0
-
-                // let mut borrow = 0;
-
-                // for i in 0..$num_limbs {
-                //     // #[cfg(all(target_arch = "x86_64", feature = "asm"))]
-                //     // #[allow(unsafe_code)]
-                //     // unsafe {
-                //     //     use core::arch::x86_64::_subborrow_u64;
-                //     //     borrow = _subborrow_u64(borrow, self.0[i], other.0[i], &mut self.0[i])
-                //     // };
-
-                //     // #[cfg(not(all(target_arch = "x86_64", feature = "asm")))]
-                //     {
-                //         self.0[i] = sbb!(self.0[i], other.0[i], &mut borrow);
-                //     }
-                // }
-
-                // borrow != 0
             }
 
             #[inline]
@@ -203,16 +185,6 @@ macro_rules! bigint_impl {
                 }
 
                 ret
-                // let mut ret = $num_limbs * 32;
-                // for i in self.0.iter().rev() {
-                //     let leading = i.leading_zeros();
-                //     ret -= leading;
-                //     if leading != 32 {
-                //         break;
-                //     }
-                // }
-
-                // ret
             }
 
             #[inline]
@@ -225,14 +197,6 @@ macro_rules! bigint_impl {
                     let bit = i - (64 * limb);
                     (value[limb] & (1 << bit)) != 0
                 }
-
-                // if i >= 32 * $num_limbs {
-                //     false
-                // } else {
-                //     let limb = i / 32;
-                //     let bit = i - (32 * limb);
-                //     (self.0[limb] & (1 << bit)) != 0
-                // }
             }
 
             #[inline]
@@ -280,9 +244,7 @@ macro_rules! bigint_impl {
             fn to_bytes_le(&self) -> Vec<u8> {
                 let bigint = self.to_64x4();
                 let array_map = bigint.iter().map(|limb| limb.to_le_bytes());
-                // let array_map = self.0.iter().map(|limb| limb.to_le_bytes());
                 let mut res = Vec::<u8>::with_capacity(4 * 8);
-                // let mut res = Vec::<u8>::with_capacity($num_limbs * 8);
                 for limb in array_map {
                     res.extend_from_slice(&limb);
                 }
@@ -323,7 +285,6 @@ macro_rules! bigint_impl {
             #[inline]
             fn read<R: Read>(reader: R) -> IoResult<Self> {
                 <[u64; 4]>::read(reader).map(Self::from_64x4)
-                // <[u32; $num_limbs]>::read(reader).map(Self::new)
             }
         }
 
@@ -386,10 +347,6 @@ macro_rules! bigint_impl {
             #[inline]
             fn from(val: u64) -> $name {
                 Self::from_64x4([val, 0, 0, 0])
-                // let mut repr = Self::default();
-                // repr.0[0] = val as u32;
-                // repr.0[1] = (val >> 32) as u32;
-                // repr
             }
         }
 
