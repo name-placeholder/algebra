@@ -12,22 +12,33 @@ use num_traits::{One, Zero};
 
 use crate::{
     biginteger::{
-        arithmetic as fa, BigInteger as _BigInteger, BigInteger256,
+        arithmetic as fa, BigInteger as _BigInteger, native_bigint::BigInteger256,
     },
     bytes::{FromBytes, ToBytes},
     fields::{FftField, Field, FpParameters, LegendreSymbol, PrimeField, SquareRootField},
 };
 use ark_serialize::*;
 
+pub mod native_fp256 {
+    use super::*;
+    impl_Fp!(
+        Fp256,
+        Fp256Parameters,
+        BigInteger256,
+        BigInteger256,
+        4,
+        "256"
+    );
+}
+pub mod webnode;
+
+#[cfg(not(any(target_family = "wasm", feature = "32x9")))]
+pub use native_fp256::*;
+
+#[cfg(any(target_family = "wasm", feature = "32x9"))]
+pub use webnode::*;
+
 // impl_Fp!(Fp64, Fp64Parameters, BigInteger64, BigInteger64, 1, "64");
-// impl_Fp!(
-//     Fp256,
-//     Fp256Parameters,
-//     BigInteger256,
-//     BigInteger256,
-//     4,
-//     "256"
-// );
 // impl_Fp!(
 //     Fp320,
 //     Fp320Parameters,
@@ -91,6 +102,3 @@ pub use quadratic_extension::*;
 
 pub mod cubic_extension;
 pub use cubic_extension::*;
-
-pub mod webnode;
-pub use webnode::*;

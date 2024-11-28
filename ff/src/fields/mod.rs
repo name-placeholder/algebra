@@ -547,11 +547,17 @@ impl<Slice: AsRef<[u64]>> Iterator for BitIteratorLE<Slice> {
     }
 }
 
-// use crate::biginteger::BigInteger256;
 use num_bigint::BigUint;
 
+pub mod impl_conv {
+    use super::*;
+    use crate::biginteger::native_bigint::BigInteger256;
+    use crate::native_fp256::{Fp256, Fp256Parameters};
+
+    impl_field_bigint_conv!(Fp256, BigInteger256, Fp256Parameters);
+}
+
 // impl_field_bigint_conv!(Fp64, BigInteger64, Fp64Parameters);
-// impl_field_bigint_conv!(Fp256, BigInteger256, Fp256Parameters);
 // impl_field_bigint_conv!(Fp320, BigInteger320, Fp320Parameters);
 // impl_field_bigint_conv!(Fp384, BigInteger384, Fp384Parameters);
 // impl_field_bigint_conv!(Fp448, BigInteger448, Fp448Parameters);

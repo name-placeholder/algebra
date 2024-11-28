@@ -1,7 +1,7 @@
 
 use crate::{
     biginteger::{
-        BigInteger as _BigInteger, BigInteger256,
+        BigInteger as _BigInteger, webnode::BigInteger256,
     },
     bytes::{FromBytes, ToBytes},
     fields::{FftField, Field, LegendreSymbol, PrimeField, SquareRootField},

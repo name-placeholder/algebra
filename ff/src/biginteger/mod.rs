@@ -29,14 +29,17 @@ pub fn signed_mod_reduction(n: u64, modulus: u64) -> i64 {
     }
 }
 
-// bigint_impl!(BigInteger64, 1);
-// bigint_impl!(BigInteger128, 2);
-bigint_impl!(BigInteger256, 9);
-// bigint_impl!(BigInteger320, 5);
-// bigint_impl!(BigInteger384, 6);
-// bigint_impl!(BigInteger448, 7);
-// bigint_impl!(BigInteger768, 12);
-// bigint_impl!(BigInteger832, 13);
+pub mod native_bigint {
+    use super::*;
+    bigint_impl!(BigInteger256, 4);
+}
+pub mod webnode;
+
+#[cfg(not(any(target_family = "wasm", feature = "32x9")))]
+pub use native_bigint::*;
+
+#[cfg(any(target_family = "wasm", feature = "32x9"))]
+pub use webnode::*;
 
 #[cfg(test)]
 mod tests;

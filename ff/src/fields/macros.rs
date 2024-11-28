@@ -326,8 +326,8 @@ macro_rules! impl_Fp {
             }
 
             #[inline]
-            fn characteristic() -> &'static [u64] {
-                P::MODULUS.as_ref()
+            fn characteristic() -> [u64; 4] {
+                P::MODULUS.0
             }
 
             #[inline]
