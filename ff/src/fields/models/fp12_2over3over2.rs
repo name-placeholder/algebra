@@ -135,7 +135,7 @@ impl<P: Fp12Parameters> Fp12<P> {
         // Faster Squaring in the Cyclotomic Subgroup of Sixth Degree Extensions
         // - Robert Granger and Michael Scott
         //
-        if characteristic_square_mod_6_is_one(Self::characteristic()) {
+        if characteristic_square_mod_6_is_one(&Self::characteristic()) {
             let fp2_nr = <P::Fp6Params as Fp6Parameters>::mul_fp2_by_nonresidue;
 
             let r0 = &self.c0.c0;
