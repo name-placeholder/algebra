@@ -916,55 +916,54 @@ impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<NewFp256<C>>
             };
             let mut tmp: [u64; 4] = rng.sample(ark_std::rand::distributions::Standard);
             tmp.as_mut().last_mut().map(|val| *val &= mask);
-                 let is_fp = match C::T.0[0] {
-                     0x192d30ed => true,
-                     0xc46eb21 => false,
-                     _ => panic!(),
-                 };
-                 const FP_MODULUS: [u64; 4] = [
-                     0x992d30ed00000001,
-                     0x224698fc094cf91b,
-                     0x0,
-                     0x4000000000000000,
-                 ];
-                 const FQ_MODULUS: [u64; 4] = [
-                     0x8c46eb2100000001,
-                     0x224698fc0994a8dd,
-                     0x0,
-                     0x4000000000000000,
-                 ];
-                 let (modulus, inv) = if is_fp {
-                     (FP_MODULUS, 11037532056220336127)
-                 } else {
-                     (FQ_MODULUS, 10108024940646105087)
-                 };
-                 let is_valid = || {
-                     for (random, modulus) in tmp.iter().copied().zip(modulus).rev() {
-                         if random > modulus {
-                             return false;
-                         } else if random < modulus {
-                             return true;
-                         }
-                     }
-                     false
-                 };
-                 if !is_valid() {
-                     continue;
-                 }
-                 let mut r = tmp;
-                 // Montgomery Reduction
-                 for i in 0..4 {
-                     let k = r[i].wrapping_mul(inv);
-                     let mut carry = 0;
-                     mac_with_carry!(r[i], k, modulus[0] as _, &mut carry);
-                     for j in 1..4 {
-                         r[(j + i) % 4] =
-                             mac_with_carry!(r[(j + i) % 4], k, modulus[j], &mut carry);
-                     }
-                     r[i % 4] = carry;
-                 }
-                 tmp = r;
-                 return NewFp256::<C>::from_repr(BigInteger256::from_64x4(tmp)).unwrap();
+            let is_fp = match C::T.0[0] {
+                0x192d30ed => true,
+                0xc46eb21 => false,
+                _ => panic!(),
+            };
+            const FP_MODULUS: [u64; 4] = [
+                0x992d30ed00000001,
+                0x224698fc094cf91b,
+                0x0,
+                0x4000000000000000,
+            ];
+            const FQ_MODULUS: [u64; 4] = [
+                0x8c46eb2100000001,
+                0x224698fc0994a8dd,
+                0x0,
+                0x4000000000000000,
+            ];
+            let (modulus, inv) = if is_fp {
+                (FP_MODULUS, 11037532056220336127)
+            } else {
+                (FQ_MODULUS, 10108024940646105087)
+            };
+            let is_valid = || {
+                for (random, modulus) in tmp.iter().copied().zip(modulus).rev() {
+                    if random > modulus {
+                        return false;
+                    } else if random < modulus {
+                        return true;
+                    }
+                }
+                false
+            };
+            if !is_valid() {
+                continue;
+            }
+            let mut r = tmp;
+            // Montgomery Reduction
+            for i in 0..4 {
+                let k = r[i].wrapping_mul(inv);
+                let mut carry = 0;
+                mac_with_carry!(r[i], k, modulus[0] as _, &mut carry);
+                for j in 1..4 {
+                    r[(j + i) % 4] = mac_with_carry!(r[(j + i) % 4], k, modulus[j], &mut carry);
+                }
+                r[i % 4] = carry;
+            }
+            tmp = r;
+            return NewFp256::<C>::from_repr(BigInteger256::from_64x4(tmp)).unwrap();
         }
     }
 }
@@ -1058,5 +1057,20 @@ impl<C: Fp256Parameters> SquareRootField for NewFp256<C> {
     }
 }
 
-
-pub trait Fp256Parameters: crate::FpParameters<BigInt = BigInteger256> + ark_std::fmt::Debug + Clone + Copy + Default + Eq + PartialEq + PartialOrd + Ord + core::hash::Hash + 'static + Send + Sync + Sized {}
+pub trait Fp256Parameters:
+    crate::FpParameters<BigInt = BigInteger256>
+    + ark_std::fmt::Debug
+    + Clone
+    + Copy
+    + Default
+    + Eq
+    + PartialEq
+    + PartialOrd
+    + Ord
+    + core::hash::Hash
+    + 'static
+    + Send
+    + Sync
+    + Sized
+{
+}
