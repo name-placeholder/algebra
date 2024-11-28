@@ -767,8 +767,8 @@ impl<C: Fp256Parameters> Field for NewFp256<C> {
         self
     }
     #[inline]
-    fn characteristic() -> &'static [u32] {
-        &C::MODULUS.0
+    fn characteristic() -> [u64; 4] {
+        C::MODULUS.to_64x4()
     }
     #[inline]
     fn from_random_bytes_with_flags<F: Flags>(bytes: &[u8]) -> Option<(Self, F)> {

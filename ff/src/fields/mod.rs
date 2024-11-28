@@ -123,7 +123,7 @@ pub trait Field:
 
     /// Returns the characteristic of the field,
     /// in little-endian representation.
-    fn characteristic() -> &'static [u32] {
+    fn characteristic() -> [u64; 4] {
         Self::BasePrimeField::characteristic()
     }
 
