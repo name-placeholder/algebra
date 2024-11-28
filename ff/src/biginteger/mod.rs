@@ -61,8 +61,6 @@ pub trait BigInteger:
     + 'static
     + UniformRand
     + Zeroize
-    + AsMut<[u32]>
-    + AsRef<[u32]>
     + From<u64>
     + TryFrom<BigUint>
     + Into<BigUint>

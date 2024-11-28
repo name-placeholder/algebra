@@ -1,7 +1,7 @@
 macro_rules! bigint_impl {
     ($name:ident, $num_limbs:expr) => {
         #[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Hash, Zeroize)]
-        pub struct $name(pub [u32; $num_limbs]);
+        pub struct $name(pub(crate) [u32; $num_limbs]);
 
         impl $name {
             pub const fn new(value: [u32; $num_limbs]) -> Self {
@@ -14,6 +14,17 @@ macro_rules! bigint_impl {
 
             pub const fn to_64x4(&self) -> [u64; 4] {
                 crate::fields::to_64x4(self.0)
+            }
+
+            #[ark_ff_asm::unroll_for_loops]
+            pub fn assign_bits_and(&mut self, other: &Self) {
+                for i in 0..$num_limbs {
+                    self.0[i] |= other.0[i]
+                }
+            }
+
+            pub fn to_native(&self) -> [u32; $num_limbs] {
+                self.0
             }
         }
 
