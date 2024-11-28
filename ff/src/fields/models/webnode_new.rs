@@ -16,78 +16,6 @@ use ark_std::{
     str::FromStr, One, Zero,
 };
 
-pub trait FieldConstants: ark_std::fmt::Debug + Clone + Copy + Default + Eq + PartialEq + PartialOrd + Ord + core::hash::Hash + 'static + Send + Sync + Sized
-// trait FieldConstants: #[derive(Debug, Clone, Copy, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
- {
-    const U32_MODULUS: [u32; 9];
-    const U64_MODULUS: [u64; 9];
-    const U32_R: [u32; 9];
-    const U32_R2: [u32; 9];
-    const U64_MINV: u64;
-    const U32_MINV: u32;
-    const REPR_SHAVE_BITS: u32;
-}
-
-#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct FpConstant;
-impl FieldConstants for FpConstant {
-    const U32_MODULUS: [u32; 9] = [
-        0x1, 0x9698768, 0x133e46e6, 0xd31f812, 0x224, 0x0, 0x0, 0x0, 0x400000,
-    ];
-    const U64_MODULUS: [u64; 9] = {
-        let mut modulus64 = [0u64; 9];
-        let modulus = Self::U32_MODULUS;
-        let mut i = 0;
-        while i < 9 {
-            modulus64[i] = modulus[i] as u64;
-            i += 1;
-        }
-        modulus64
-    };
-    const U32_R: [u32; 9] = [
-        0x1fffff81, 0x14a5d367, 0x141ad3c0, 0x1435eec5, 0x1ffeefef, 0x1fffffff, 0x1fffffff,
-        0x1fffffff, 0x3fffff,
-    ];
-    const U32_R2: [u32; 9] = [
-        0x3b6a, 0x19c10910, 0x1a6a0188, 0x12a4fd88, 0x634b36d, 0x178792ba, 0x7797a99, 0x1dce5b8a,
-        0x3506bd,
-    ];
-    // const U32_MINV: u64 = 0x1fffffff;
-    const U64_MINV: u64 = 0x1fffffff;
-    const U32_MINV: u32 = 0x1fffffff;
-    const REPR_SHAVE_BITS: u32 = 1;
-}
-
-#[derive(Debug, Clone, Copy, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct FqConstant;
-impl FieldConstants for FqConstant {
-    const U32_MODULUS: [u32; 9] = [
-        0x1, 0x2375908, 0x52a3763, 0xd31f813, 0x224, 0x0, 0x0, 0x0, 0x400000,
-    ];
-    const U64_MODULUS: [u64; 9] = {
-        let mut modulus64 = [0u64; 9];
-        let modulus = Self::U32_MODULUS;
-        let mut i = 0;
-        while i < 9 {
-            modulus64[i] = modulus[i] as u64;
-            i += 1;
-        }
-        modulus64
-    };
-    const U32_R: [u32; 9] = [
-        0x1fffff81, 0x68ad507, 0x100e85da, 0x1435ee7e, 0x1ffeefef, 0x1fffffff, 0x1fffffff,
-        0x1fffffff, 0x3fffff,
-    ];
-    const U32_R2: [u32; 9] = [
-        0x3b6a, 0x2b1b550, 0x1027888a, 0x1ea4ed96, 0x418ad7a, 0x999eb, 0x17fae231,
-        0x1e67ed54, 0x3506bd,
-    ];
-    // const U32_MINV: u64 = 0x1fffffff;
-    const U64_MINV: u64 = 0x1fffffff;
-    const U32_MINV: u32 = 0x1fffffff;
-    const REPR_SHAVE_BITS: u32 = 1;
-}
-
 impl<C: Fp256Parameters> Into<BigInteger256> for NewFp256<C> {
     fn into(self) -> BigInteger256 {
         self.into_repr()
@@ -140,40 +68,9 @@ pub const fn to_64x4(pa: [u32; 9]) -> [u64; 4] {
     p
 }
 
-// const U32_MODULUS: [u32; 9] = [
-//     0x1, 0x9698768, 0x133e46e6, 0xd31f812, 0x224, 0x0, 0x0, 0x0, 0x400000,
-// ];
-// const U64_MODULUS: [u64; 9] = {
-//     let mut modulus64 = [0u64; 9];
-//     let modulus = U32_MODULUS;
-//     let mut i = 0;
-//     while i < 9 {
-//         modulus64[i] = modulus[i] as u64;
-//         i += 1;
-//     }
-//     modulus64
-// };
-// const U32_R: [u32; 9] = [
-//     0x1fffff81, 0x14a5d367, 0x141ad3c0, 0x1435eec5, 0x1ffeefef, 0x1fffffff, 0x1fffffff,
-//     0x1fffffff, 0x3fffff,
-// ];
-// const U32_R2: [u32; 9] = [
-//     0x3b6a, 0x19c10910, 0x1a6a0188, 0x12a4fd88, 0x634b36d, 0x178792ba, 0x7797a99, 0x1dce5b8a,
-//     0x3506bd,
-// ];
-// // const U32_MINV: u64 = 0x1fffffff;
-// const U64_MINV: u64 = 0x1fffffff;
-// const U32_MINV: u32 = 0x1fffffff;
-
-// const REPR_SHAVE_BITS: u32 = 1;
-
-// #[inline]
-const fn gte_modulus<C: Fp256Parameters>(x: &Inner) -> bool {
-    // dbg!(x, U32_MODULUS);
+const fn gte_modulus<C: Fp256Parameters>(x: &BigInteger256) -> bool {
     let mut i = NewFp256::<C>::NLIMBS - 1;
     loop {
-    // for i in (0..9).rev() {
-        // eprintln!("gte_modulus2={:?} x[i]={:?} U32_MODULUS[i]={:?}", i, x[i], U32_MODULUS[i]);
         // don't fix warning -- that makes it 15% slower!
         #[allow(clippy::comparison_chain)]
         if x.0[i] > C::MODULUS.0[i] {
@@ -190,7 +87,7 @@ const fn gte_modulus<C: Fp256Parameters>(x: &Inner) -> bool {
 }
 
 #[ark_ff_asm::unroll_for_loops]
-const fn conditional_reduce<C: Fp256Parameters>(x: &mut Inner) {
+const fn conditional_reduce<C: Fp256Parameters>(x: &mut BigInteger256) {
     if gte_modulus::<C>(&x) {
         for i in 0..9 {
             x.0[i] = x.0[i].wrapping_sub(C::MODULUS.0[i]);
@@ -206,7 +103,7 @@ const fn conditional_reduce<C: Fp256Parameters>(x: &mut Inner) {
 
 #[ark_ff_asm::unroll_for_loops]
 #[allow(unused)]
-fn add_assign<C: Fp256Parameters>(x: &mut Inner, y: &Inner) {
+fn add_assign<C: Fp256Parameters>(x: &mut BigInteger256, y: &BigInteger256) {
     let y = &y.0;
     let mut tmp: u32;
     let mut carry: i32 = 0;
@@ -227,12 +124,8 @@ fn add_assign<C: Fp256Parameters>(x: &mut Inner, y: &Inner) {
     }
 }
 
-// #[derive(Clone, Copy, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-// struct Inner([u32; 9]);
-type Inner = BigInteger256;
-
 #[derive(Clone, Copy, Default, Eq, PartialEq, Hash)]
-pub struct NewFp256<C: Fp256Parameters> (pub Inner, PhantomData<C>);
+pub struct NewFp256<C: Fp256Parameters> (pub BigInteger256, PhantomData<C>);
 
 /// Note that this implementation of `Ord` compares field elements viewing
 /// them as integers in the range 0, 1, ..., P::MODULUS - 1. However, other
@@ -286,10 +179,8 @@ impl<C: Fp256Parameters> NewFp256<C> {
     const NLIMBS: usize = 9;
 
     #[inline]
-    pub const fn new(element: Inner) -> Self {
+    pub const fn new(element: BigInteger256) -> Self {
         Self(element, PhantomData)
-        // let BigInteger256(bigint) = element;
-        // Self(from_64x4(bigint))
     }
     const fn const_is_zero(&self) -> bool {
         let mut index = 0;
@@ -300,7 +191,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
         }
         is_zero
     }
-    const fn const_neg(self, modulus: Inner) -> Self {
+    const fn const_neg(self, modulus: BigInteger256) -> Self {
         if !self.const_is_zero() {
             Self::new(Self::sub_noborrow(&modulus, &self.0))
         } else {
@@ -310,7 +201,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
 
     #[ark_ff_asm::unroll_for_loops]
     #[allow(unused_assignments)]
-    const fn sub_noborrow(a: &Inner, b: &Inner) -> Inner {
+    const fn sub_noborrow(a: &BigInteger256, b: &BigInteger256) -> BigInteger256 {
         /// Calculate a - b - borrow, returning the result and modifying
         /// the borrow value.
         macro_rules! sbb {
@@ -336,8 +227,8 @@ impl<C: Fp256Parameters> NewFp256<C> {
     pub const fn const_from_str(
         limbs: &[u64],
         is_positive: bool,
-        r2: Inner,
-        modulus: Inner,
+        r2: BigInteger256,
+        modulus: BigInteger256,
         inv: u64,
     ) -> Self {
         let repr = match limbs {
@@ -357,9 +248,9 @@ impl<C: Fp256Parameters> NewFp256<C> {
 
     #[inline]
     pub(crate) const fn const_from_repr(
-        repr: Inner,
-        r2: Inner,
-        modulus: Inner,
+        repr: BigInteger256,
+        r2: BigInteger256,
+        modulus: BigInteger256,
         inv: u32,
     ) -> Self {
         let mut r = Self::new(repr);
@@ -383,181 +274,56 @@ impl<C: Fp256Parameters> NewFp256<C> {
     };
 
     #[ark_ff_asm::unroll_for_loops]
-    const fn const_mul_without_reduce(&mut self, other: &Self, _modulus: &Inner, _inv: u32) {
-
-        // const N: usize = 9;
-
-        // how much terms we can add before a carry
-        // let n_safe_terms = 2u64.pow(64 - 2 * SHIFT) as usize;
-        // how much j steps we can do before a carry:
-        // let n_safe_steps = 2u64.pow(64 - 2 * SHIFT - 1) as usize;
-
+    const fn const_mul_without_reduce(&mut self, other: &Self, _modulus: &BigInteger256, _inv: u32) {
         let x = &mut self.0.0;
         let y = &other.0.0;
-        // let y_local = other.0.0;
 
-        // load y[i] into local u64s
-        // TODO make sure these are locals
-        let mut y_local = [0u64; Self::NLIMBS];
+        let mut y_local = [0u64; 9];
         for index in 0..9 {
             y_local[index] = y[index] as u64;
         }
-        // let mut index = 0;
-        // while index < Self::NLIMBS {
-        // // for i in 0..9 {
-        //     y_local[index] = y[index] as u64;
-        //     index += 1;
-        // }
-
-        // assert_eq!(y_local.to_vec(), y.iter().map(|v| *v as u64).collect::<Vec<_>>());
-
-        // locals for result
-        // let mut z = [0u64; 8];
-        // let mut tmp: u64;
-
-        // dbg!(y_local);
 
         let mut xy = [0u64; 9];
 
-        // main loop, without intermediate carries except for z0
-        // #[allow(clippy::needless_range_loop)]
         for i in 0..9 {
-        // let mut i = 0;
-        // while i < Self::NLIMBS {
-        // for i in 0..9 {
-            // eprintln!("\n### I={:?} ###", i);
-
             let xi = x[i] as u64;
 
-            // compute qi and carry z0 result to z1 before discarding z0
-            // tmp = xi * y_local[0];
-            // let qi = ((tmp & MASK64) * U32_MINV) & MASK64;
-            // z[1] += (tmp + qi * U64_MODULUS[0]) >> SHIFT64;
             let tmp = (xi * y_local[0]) + xy[0];
             let qi = (MASK64 + 1) - (tmp & MASK64);
-            // let qi2 = ((tmp & MASK64) * U32_MINV) & MASK64;
-            // dbg!(qi);
-            // assert_eq!(qi, qi2);
-
-            // let carry = add_mul(tmp, qi, U64_MODULUS[0]) >> SHIFT64;
             let carry = (tmp + (qi * Self::U64_MODULUS[0])) >> SHIFT64;
 
-            // // j=0, compute q_i
-            // let j = 0;
-            // // XY[0] + x[i]*y[0]
-            // i64.mul(xi, Y[j]);
-            // i64.add($, XY[j]);
-            // // qi = (($ & wordMax) * mu) & wordMax
-            // local.set(tmp);
-            // local.set(qi, computeQ(tmp));
-            // local.get(tmp);
-            // // (stack, _) = $ + qi*p[0]
-            // addMul(qi, P[j]);
-            // i64.shr_u($, wn); // we just put carry on the stack, use it later
-
-            // function computeQ(x: Input<i64>) {
-            //   // q = ((x & wordMax) * mu) & wordMax, where wordMax = 2^w - 1
-            //   x = i64.and(x, wordMax);
-            //   if (mu === wordMax) {
-            //     // special case relevant for high 2-adicity curves: mu = 2^w - 1
-            //     // (mu * x) % 2^w = -x % 2^w  = 2^w - x
-            //     return i64.sub(wordMax + 1n, x);
-            //   } else {
-            //     return i64.and(i64.mul(x, mu), wordMax);
-            //   }
-            // }
-
-            // let mut j = 1;
-            // while j < Self::NLIMBS - 1 {
             for j in 1..8 {
                 let did_carry = j == 1;
-                // let did_carry = ((j - 1) % n_safe_steps) == 0;
-                // let do_carry = (j % n_safe_steps) == 0;
-
-                // assert!(!do_carry);
-                // dbg!(did_carry, do_carry);
                 let mut xy_j = xy[j];
                 if did_carry {
                     xy_j += carry;
                 }
-                // xy[j - 1] = add_mul((xi * y_local[j]) + xy_j, qi, U64_MODULUS[j]);
                 xy[j - 1] = (xy_j + (xi * y_local[j])) + (qi * Self::U64_MODULUS[j]);
-                // xy[j - 1] = (xy_j + (xi * y_local[j])) + (qi * U64_MODULUS[j]);
-                // j += 1;
             }
 
-            // for (j = 1; j < n - 1; j++) {
-            //   // XY[j] + x[i]*y[j] + qi*p[j], or
-            //   // stack + XY[j] + x[i]*y[j] + qi*p[j]
-            //   // ... = XY[j-1], or  = (stack, XY[j-1])
-            //   let didCarry = (j - 1) % nSafeSteps === 0;
-            //   let doCarry = j % nSafeSteps === 0;
-            //   local.get(XY[j]);
-            //   Field.optionalCarryAdd(didCarry);
-            //   i64.mul(xi, Y[j]);
-            //   i64.add();
-            //   addMul(qi, P[j]);
-            //   Field.optionalCarry(doCarry, $, tmp);
-            //   local.set(XY[j - 1]);
-            // }
-
-            // dbg!(xy);
             let j = Self::NLIMBS - 1;
-            // let did_carry = ((j - 1) % n_safe_steps) == 0;
-            // let do_carry = (j % n_safe_steps) == 0;
-
-            // assert!(!did_carry);
-            // dbg!(did_carry, do_carry);
-
-            // if do_carry {
-            //     // todo!();
-            // } else {
-                // xy[j - 1] = add_mul(xi * y_local[j], qi, U64_MODULUS[j]);
-                xy[j - 1] = (xi * y_local[j]) + (qi * Self::U64_MODULUS[j]);
-                // xy[j - 1] = (xi * y_local[j]) + (qi * U64_MODULUS[j]);
-            // }
-
-            // // if the last iteration doesn't do a carry, then XY[n-1] is never set,
-            // // so we also don't have to get it & can save 1 addition
-            // i64.mul(xi, Y[j]);
-            // Field.optionalCarryAdd(didCarry);
-            // addMul(qi, P[j]);
-            // local.set(XY[j - 1]);
-
-            // dbg!(xy);
-
-            // i += 1;
+            xy[j - 1] = (xi * y_local[j]) + (qi * Self::U64_MODULUS[j]);
         }
 
-        // dbg!(xy);
-
         for j in 1..9 {
-        // let mut j = 1;
-        // while j < Self::NLIMBS {
-        // for j in 1..N {
             x[j - 1] = (xy[j - 1] as u32) & MASK;
             xy[j] += xy[j - 1] >> SHIFT64;
-            // j += 1;
         }
         x[Self::NLIMBS - 1] = xy[Self::NLIMBS - 1] as u32;
     }
 
-    const fn const_mul(&mut self, other: &Self, modulus: &Inner, inv: u32) {
+    const fn const_mul(&mut self, other: &Self, modulus: &BigInteger256, inv: u32) {
         self.const_mul_without_reduce(other, modulus, inv);
         self.const_reduce(modulus);
     }
 
-    const fn const_reduce(&mut self, _modulus: &Inner) {
+    const fn const_reduce(&mut self, _modulus: &BigInteger256) {
         conditional_reduce::<C>(&mut self.0);
-        // Self(reduced, PhantomData)
-        // if !self.const_is_valid(modulus) {
-        //     self.0 = Self::sub_noborrow(&self.0, &modulus);
-        // }
     }
 
     // don't fix warning -- that makes it 15% slower!
     #[allow(clippy::comparison_chain)]
-    const fn const_is_valid(&self, _modulus: &Inner) -> bool {
+    const fn const_is_valid(&self, _modulus: &BigInteger256) -> bool {
         let mut i = NewFp256::<C>::NLIMBS - 1;
         loop {
             if self.0.0[i] > C::MODULUS.0[i] {
@@ -574,7 +340,7 @@ impl<C: Fp256Parameters> NewFp256<C> {
     }
 
     #[ark_ff_asm::unroll_for_loops]
-    fn const_square(&mut self) {
+    const fn const_square(&mut self) {
         let mut x = [0u64; 9];
         for i in 0..9 {
             x[i] = self.0.0[i] as u64;
@@ -627,9 +393,6 @@ impl<C: Fp256Parameters> NewFp256<C> {
     }
     fn reduce(&mut self) {
         self.const_reduce(&C::MODULUS);
-        // if !self.is_valid() {
-        //     self.0.sub_noborrow(&P::MODULUS);
-        // }
     }
 }
 
@@ -1108,6 +871,7 @@ impl<C: Fp256Parameters> Field for NewFp256<C> {
     fn frobenius_map(&mut self, _: usize) {}
 }
 
+#[cfg(not(test))]
 impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<NewFp256<C>>
     for ark_std::rand::distributions::Standard
 {
@@ -1126,12 +890,37 @@ impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<NewFp256<C>>
             let mut tmp: [u64; 4] = rng.sample(ark_std::rand::distributions::Standard);
             tmp.as_mut().last_mut().map(|val| *val &= mask);
 
+            let tmp = NewFp256(BigInteger256::from_64x4(tmp), PhantomData);
+            if tmp.is_valid() {
+                return tmp;
+            }
+        }
+    }
+}
+
+// During tests, we want to generate the same fields than on native (to test witness generation etc)
+#[cfg(test)]
+impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<NewFp256<C>>
+    for ark_std::rand::distributions::Standard
+{
+    #[inline]
+    fn sample<R: ark_std::rand::Rng + ?Sized>(&self, rng: &mut R) -> NewFp256<C> {
+        loop {
+            if !(C::REPR_SHAVE_BITS <= 64) {
+                panic!("assertion failed: P::REPR_SHAVE_BITS <= 64")
+            }
+            let mask = if C::REPR_SHAVE_BITS == 64 {
+                0
+            } else {
+                core::u64::MAX >> C::REPR_SHAVE_BITS
+            };
+            let mut tmp: [u64; 4] = rng.sample(ark_std::rand::distributions::Standard);
+            tmp.as_mut().last_mut().map(|val| *val &= mask);
                  let is_fp = match C::T.0[0] {
                      0x192d30ed => true,
                      0xc46eb21 => false,
                      _ => panic!(),
                  };
-
                  const FP_MODULUS: [u64; 4] = [
                      0x992d30ed00000001,
                      0x224698fc094cf91b,
@@ -1144,13 +933,11 @@ impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<NewFp256<C>>
                      0x0,
                      0x4000000000000000,
                  ];
-
                  let (modulus, inv) = if is_fp {
                      (FP_MODULUS, 11037532056220336127)
                  } else {
                      (FQ_MODULUS, 10108024940646105087)
                  };
-
                  let is_valid = || {
                      for (random, modulus) in tmp.iter().copied().zip(modulus).rev() {
                          if random > modulus {
@@ -1161,11 +948,9 @@ impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<NewFp256<C>>
                      }
                      false
                  };
-
                  if !is_valid() {
                      continue;
                  }
-
                  let mut r = tmp;
                  // Montgomery Reduction
                  for i in 0..4 {
@@ -1179,7 +964,6 @@ impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<NewFp256<C>>
                      r[i % 4] = carry;
                  }
                  tmp = r;
-
                  return NewFp256::<C>::from_repr(BigInteger256::from_64x4(tmp)).unwrap();
         }
     }

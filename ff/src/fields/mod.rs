@@ -539,7 +539,7 @@ impl<Slice: AsRef<[u64]>> Iterator for BitIteratorLE<Slice> {
     }
 }
 
-use crate::biginteger::BigInteger256;
+// use crate::biginteger::BigInteger256;
 use num_bigint::BigUint;
 
 // impl_field_bigint_conv!(Fp64, BigInteger64, Fp64Parameters);

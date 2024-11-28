@@ -21,7 +21,7 @@ use num_traits::{One, Zero};
 use zeroize::Zeroize;
 
 use ark_ff::{
-    bytes::{FromBytes, ToBytes}, fields::{BitIteratorBE, Field, PrimeField, SquareRootField}, BigInteger, BigInteger256, ToConstraintField, UniformRand
+    bytes::{FromBytes, ToBytes}, fields::{BitIteratorBE, Field, PrimeField, SquareRootField}, BigInteger, ToConstraintField, UniformRand
 };
 
 #[cfg(feature = "parallel")]
@@ -112,7 +112,7 @@ impl<P: Parameters> GroupAffine<P> {
     pub fn is_in_correct_subgroup_assuming_on_curve(&self) -> bool {
         use core::convert::TryInto;
         let characteristic = P::ScalarField::characteristic();
-        self.mul_bits(BitIteratorBE::new(&ark_ff::biginteger::to_64x4(characteristic.try_into().unwrap())))
+        self.mul_bits(BitIteratorBE::new(&ark_ff::to_64x4(characteristic.try_into().unwrap())))
             .is_zero()
     }
 }

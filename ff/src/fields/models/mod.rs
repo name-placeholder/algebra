@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use ark_std::{
     cmp::{Ord, Ordering, PartialOrd},
     fmt::{Display, Formatter, Result as FmtResult},
@@ -90,8 +92,5 @@ pub use quadratic_extension::*;
 pub mod cubic_extension;
 pub use cubic_extension::*;
 
-// pub mod webnode;
-
 pub mod webnode_new;
 pub use webnode_new::*;
-// pub type Fp webnode_new::NewFp256::<webnode_new::FpConstants>;

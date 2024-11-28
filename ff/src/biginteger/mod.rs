@@ -41,23 +41,6 @@ bigint_impl!(BigInteger256, 9);
 #[cfg(test)]
 mod tests;
 
-pub const fn to_64x4(pa: [u32; 9]) -> [u64; 4] {
-    let mut p = [0u64; 4];
-    p[0] = pa[0] as u64;
-    p[0] |= (pa[1] as u64) << 29;
-    p[0] |= (pa[2] as u64) << 58;
-    p[1] = (pa[2] as u64) >> 6;
-    p[1] |= (pa[3] as u64) << 23;
-    p[1] |= (pa[4] as u64) << 52;
-    p[2] = (pa[4] as u64) >> 12;
-    p[2] |= (pa[5] as u64) << 17;
-    p[2] |= (pa[6] as u64) << 46;
-    p[3] = (pa[6] as u64) >> 18;
-    p[3] |= (pa[7] as u64) << 11;
-    p[3] |= (pa[8] as u64) << 40;
-    p
-}
-
 /// This defines a `BigInteger`, a smart wrapper around a
 /// sequence of `u64` limbs, least-significant limb first.
 pub trait BigInteger:
@@ -158,33 +141,33 @@ pub trait BigInteger:
 
     /// Returns the windowed non-adjacent form of `self`, for a window of size `w`.
     fn find_wnaf(&self, w: usize) -> Option<Vec<i64>> {
-        todo!()
-        // // w > 2 due to definition of wNAF, and w < 64 to make sure that `i64`
-        // // can fit each signed digit
-        // if w >= 2 && w < 64 {
-        //     let mut res = vec![];
-        //     let mut e = *self;
+        // w > 2 due to definition of wNAF, and w < 64 to make sure that `i64`
+        // can fit each signed digit
+        if w >= 2 && w < 64 {
+            let mut res = vec![];
+            let mut e = *self;
+            let e64 = self.to_64x4();
 
-        //     while !e.is_zero() {
-        //         let z: i64;
-        //         if e.is_odd() {
-        //             z = signed_mod_reduction(e.as_ref()[0], 1 << w);
-        //             if z >= 0 {
-        //                 e.sub_noborrow(&Self::from(z as u64));
-        //             } else {
-        //                 e.add_nocarry(&Self::from((-z) as u64));
-        //             }
-        //         } else {
-        //             z = 0;
-        //         }
-        //         res.push(z);
-        //         e.div2();
-        //     }
+            while !e.is_zero() {
+                let z: i64;
+                if e.is_odd() {
+                    z = signed_mod_reduction(e64.as_ref()[0], 1 << w);
+                    if z >= 0 {
+                        e.sub_noborrow(&Self::from(z as u64));
+                    } else {
+                        e.add_nocarry(&Self::from((-z) as u64));
+                    }
+                } else {
+                    z = 0;
+                }
+                res.push(z);
+                e.div2();
+            }
 
-        //     Some(res)
-        // } else {
-        //     None
-        // }
+            Some(res)
+        } else {
+            None
+        }
     }
 
     /// Writes this `BigInteger` as a big endian integer. Always writes
