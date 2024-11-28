@@ -53,7 +53,7 @@ macro_rules! bigint_impl {
             }
 
             #[inline]
-            // #[ark_ff_asm::unroll_for_loops]
+            #[ark_ff_asm::unroll_for_loops]
             fn sub_noborrow(&mut self, other: &Self) -> bool {
                 let mut this = self.to_64x4();
                 let other = other.to_64x4();

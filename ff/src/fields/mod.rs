@@ -470,6 +470,7 @@ pub struct BitIteratorBE<Slice: AsRef<[u64]>> {
     s: Slice,
     n: usize,
 }
+
 impl<Slice: AsRef<[u64]>> BitIteratorBE<Slice> {
     pub fn new(s: Slice) -> Self {
         let n = s.as_ref().len() * 64;
@@ -481,6 +482,7 @@ impl<Slice: AsRef<[u64]>> BitIteratorBE<Slice> {
         Self::new(s).skip_while(|b| !b)
     }
 }
+
 impl<Slice: AsRef<[u64]>> Iterator for BitIteratorBE<Slice> {
     type Item = bool;
 
@@ -504,6 +506,7 @@ pub struct BitIteratorLE<Slice: AsRef<[u64]>> {
     n: usize,
     max_len: usize,
 }
+
 impl<Slice: AsRef<[u64]>> BitIteratorLE<Slice> {
     pub fn new(s: Slice) -> Self {
         let n = 0;
@@ -525,6 +528,7 @@ impl<Slice: AsRef<[u64]>> BitIteratorLE<Slice> {
         iter
     }
 }
+
 impl<Slice: AsRef<[u64]>> Iterator for BitIteratorLE<Slice> {
     type Item = bool;
     fn next(&mut self) -> Option<bool> {

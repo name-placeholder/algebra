@@ -110,7 +110,7 @@ impl<P: Parameters> GroupAffine<P> {
     /// Checks that the current point is in the prime order subgroup given
     /// the point on the curve.
     pub fn is_in_correct_subgroup_assuming_on_curve(&self) -> bool {
-        self.mul_bits(BitIteratorBE::new(&P::ScalarField::characteristic()))
+        self.mul_bits(BitIteratorBE::new(P::ScalarField::characteristic()))
             .is_zero()
     }
 }
