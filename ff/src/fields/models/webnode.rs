@@ -871,7 +871,7 @@ impl<C: Fp256Parameters> Field for Fp256<C> {
     fn frobenius_map(&mut self, _: usize) {}
 }
 
-#[cfg(not(test))]
+#[cfg(not(feature = "32x9"))]
 impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<Fp256<C>>
     for ark_std::rand::distributions::Standard
 {
@@ -899,7 +899,7 @@ impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<Fp256<C>>
 }
 
 // During tests, we want to generate the same fields than on native (to test witness generation etc)
-#[cfg(test)]
+#[cfg(feature = "32x9")]
 impl<C: Fp256Parameters> ark_std::rand::distributions::Distribution<Fp256<C>>
     for ark_std::rand::distributions::Standard
 {

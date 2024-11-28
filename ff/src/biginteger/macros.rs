@@ -1,7 +1,7 @@
 macro_rules! bigint_impl {
     ($name:ident, $num_limbs:expr) => {
         #[derive(Copy, Clone, PartialEq, Eq, Debug, Default, Hash, Zeroize)]
-        pub struct $name(pub [u64; $num_limbs]);
+        pub struct $name(pub(crate) [u64; $num_limbs]);
 
         impl $name {
             pub const fn new(value: [u64; $num_limbs]) -> Self {

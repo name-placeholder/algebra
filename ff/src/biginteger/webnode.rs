@@ -312,7 +312,8 @@ impl FromBytes for BigInteger256 {
 
 impl Display for BigInteger256 {
     fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-        for i in self.0.iter().rev() {
+        let this = self.to_64x4();
+        for i in this.iter().rev() {
             write!(f, "{:016X}", *i)?;
         }
         Ok(())
