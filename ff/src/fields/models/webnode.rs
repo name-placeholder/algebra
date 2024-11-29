@@ -87,6 +87,7 @@ const fn gte_modulus<C: Fp256Parameters>(x: &BigInteger256) -> bool {
 }
 
 #[ark_ff_asm::unroll_for_loops]
+#[inline(always)]
 const fn conditional_reduce<C: Fp256Parameters>(x: &mut BigInteger256) {
     if gte_modulus::<C>(&x) {
         for i in 0..9 {
@@ -102,7 +103,7 @@ const fn conditional_reduce<C: Fp256Parameters>(x: &mut BigInteger256) {
 }
 
 #[ark_ff_asm::unroll_for_loops]
-#[allow(unused)]
+#[inline(always)]
 fn add_assign<C: Fp256Parameters>(x: &mut BigInteger256, y: &BigInteger256) {
     let y = &y.0;
     let mut tmp: u32;
@@ -274,6 +275,7 @@ impl<C: Fp256Parameters> Fp256<C> {
     };
 
     #[ark_ff_asm::unroll_for_loops]
+    #[inline(always)]
     const fn const_mul_without_reduce(&mut self, other: &Self, _modulus: &BigInteger256, _inv: u32) {
         let x = &mut self.0.0;
         let y = &other.0.0;
@@ -312,11 +314,13 @@ impl<C: Fp256Parameters> Fp256<C> {
         x[Self::NLIMBS - 1] = xy[Self::NLIMBS - 1] as u32;
     }
 
+    #[inline(always)]
     const fn const_mul(&mut self, other: &Self, modulus: &BigInteger256, inv: u32) {
         self.const_mul_without_reduce(other, modulus, inv);
         self.const_reduce(modulus);
     }
 
+    #[inline(always)]
     const fn const_reduce(&mut self, _modulus: &BigInteger256) {
         conditional_reduce::<C>(&mut self.0);
     }
@@ -340,6 +344,7 @@ impl<C: Fp256Parameters> Fp256<C> {
     }
 
     #[ark_ff_asm::unroll_for_loops]
+    #[inline(always)]
     const fn const_square(&mut self) {
         let mut x = [0u64; 9];
         for i in 0..9 {
@@ -434,6 +439,7 @@ impl<C: Fp256Parameters> core::ops::DivAssign<Self> for Fp256<C> {
 }
 impl<C: Fp256Parameters> Add<Self> for Fp256<C> {
     type Output = Self;
+    #[inline(always)]
     fn add(mut self, other: Self) -> Self {
         self.add_assign(other);
         self
@@ -454,18 +460,21 @@ impl<C: Fp256Parameters> Div<Self> for Fp256<C> {
     }
 }
 impl<C: Fp256Parameters> core::ops::AddAssign<Self> for Fp256<C> {
+    #[inline(always)]
     fn add_assign(&mut self, other: Self) {
         add_assign::<C>(&mut self.0, &other.0)
     }
 }
 impl<C: Fp256Parameters> Mul<Self> for Fp256<C> {
     type Output = Self;
+    #[inline(always)]
     fn mul(mut self, other: Self) -> Self {
         self.mul_assign(other);
         self
     }
 }
 impl<C: Fp256Parameters> core::ops::MulAssign<Self> for Fp256<C> {
+    #[inline(always)]
     fn mul_assign(&mut self, other: Self) {
         self.const_mul(&other, &C::MODULUS, C::INV as u32);
     }
@@ -528,24 +537,28 @@ impl<'a, C: Fp256Parameters> core::iter::Sum<&'a Self> for Fp256<C> {
 }
 impl<'a, C: Fp256Parameters> Add<&'a Self> for Fp256<C> {
     type Output = Self;
+    #[inline(always)]
     fn add(mut self, other: &'a Self) -> Self {
         self.add_assign(other);
         self
     }
 }
 impl<'a, C: Fp256Parameters> core::ops::AddAssign<&'a Self> for Fp256<C> {
+    #[inline(always)]
     fn add_assign(&mut self, other: &'a Self) {
         add_assign::<C>(&mut self.0, &other.0)
     }
 }
 impl<'a, C: Fp256Parameters> Mul<&'a Self> for Fp256<C> {
     type Output = Self;
+    #[inline(always)]
     fn mul(mut self, other: &'a Self) -> Self {
         self.mul_assign(other);
         self
     }
 }
 impl<'a, C: Fp256Parameters> core::ops::MulAssign<&'a Self> for Fp256<C> {
+    #[inline(always)]
     fn mul_assign(&mut self, other: &'a Self) {
         self.const_mul(&other, &C::MODULUS, C::INV as u32)
     }
@@ -802,14 +815,13 @@ impl<C: Fp256Parameters> Field for Fp256<C> {
                 .and_then(|f| F::from_u8(flags).map(|flag| (f, flag)))
         }
     }
-    #[inline]
+    #[inline(always)]
     fn square(&self) -> Self {
         let mut temp = self.clone();
         temp.square_in_place();
         temp
     }
-    #[inline]
-    #[allow(unused_braces, clippy::absurd_extreme_comparisons)]
+    #[inline(always)]
     fn square_in_place(&mut self) -> &mut Self {
         self.const_square();
         self
