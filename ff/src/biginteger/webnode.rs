@@ -7,6 +7,7 @@ use num_bigint::BigUint;
 use zeroize::Zeroize;
 
 use crate::{FromBytes, ToBytes};
+use crate::fields::webnode::MASK;
 
 use super::BigInteger;
 
@@ -52,28 +53,32 @@ impl BigInteger for BigInteger256 {
     #[inline]
     #[ark_ff_asm::unroll_for_loops]
     fn add_nocarry(&mut self, other: &Self) -> bool {
-        let mut this = self.to_64x4();
-        let other = other.to_64x4();
-
         let mut carry = 0;
-        for i in 0..4 {
-            this[i] = adc!(this[i], other[i], &mut carry);
+        for i in 0..9 {
+            self.0[i] = {
+                let tmp = self.0[i] as u64 + other.0[i] as u64 + carry;
+                carry = tmp >> 29;
+                (tmp as u32) & MASK
+            };
         }
-        *self = Self::from_64x4(this);
         carry != 0
     }
 
     #[inline]
     #[ark_ff_asm::unroll_for_loops]
     fn sub_noborrow(&mut self, other: &Self) -> bool {
-        let mut this = self.to_64x4();
-        let other = other.to_64x4();
-
         let mut borrow = 0;
-        for i in 0..4 {
-            this[i] = sbb!(this[i], other[i], &mut borrow);
+        for i in 0..9 {
+            self.0[i] = {
+                let tmp = (1u64 << 29) + (self.0[i] as u64) - (other.0[i] as u64) - (borrow as u64);
+                borrow = if tmp >> 29 == 0 {
+                    1
+                } else {
+                    0
+                };
+                (tmp as u32) & MASK
+            };
         }
-        *self = Self::from_64x4(this);
         borrow != 0
     }
 
@@ -81,96 +86,88 @@ impl BigInteger for BigInteger256 {
     #[ark_ff_asm::unroll_for_loops]
     #[allow(unused)]
     fn mul2(&mut self) {
-        let mut value = self.to_64x4();
         let mut last = 0;
-        for i in 0..4 {
-            let a = &mut value[i];
-            let tmp = *a >> 63;
-            *a <<= 1;
-            *a |= last;
+        for i in 0..9 {
+            let a = &mut self.0[i];
+            let tmp = (*a as u64) >> 28;
+            *a = (*a << 1) & MASK;
+            *a |= last as u32;
             last = tmp;
         }
-        *self = Self::from_64x4(value)
     }
 
     #[inline]
     #[ark_ff_asm::unroll_for_loops]
     fn muln(&mut self, mut n: u32) {
-        let mut value = self.to_64x4();
         if n >= 64 * 4 {
             *self = Self::from(0);
             return;
         }
 
-        while n >= 64 {
+        while n >= 29 {
             let mut t = 0;
-            for i in 0..4 {
-                core::mem::swap(&mut t, &mut value[i]);
+            for i in 0..9 {
+                core::mem::swap(&mut t, &mut self.0[i]);
             }
-            n -= 64;
+            n -= 29;
         }
 
         if n > 0 {
             let mut t = 0;
             #[allow(unused)]
-            for i in 0..4 {
-                let a = &mut value[i];
-                let t2 = *a >> (64 - n);
-                *a <<= n;
+            for i in 0..9 {
+                let a = &mut self.0[i];
+                let t2 = *a >> (29 - n);
+                *a = (*a << n) & MASK;
+                // *a <<= n;
                 *a |= t;
                 t = t2;
             }
         }
-        *self = Self::from_64x4(value)
     }
 
     #[inline]
     #[ark_ff_asm::unroll_for_loops]
     #[allow(unused)]
     fn div2(&mut self) {
-        let mut value = self.to_64x4();
         let mut t = 0;
-        for i in 0..4 {
-            let a = &mut value[4 - i - 1];
-            let t2 = *a << 63;
+        for i in 0..9 {
+            let a = &mut self.0[9 - i - 1];
+            let t2 = (*a << 28) & MASK;
             *a >>= 1;
             *a |= t;
             t = t2;
         }
-        *self = Self::from_64x4(value)
     }
 
     #[inline]
     #[ark_ff_asm::unroll_for_loops]
     fn divn(&mut self, mut n: u32) {
-        let mut value = self.to_64x4();
-
         if n >= 64 * 4 {
             *self = Self::from(0);
             return;
         }
 
-        while n >= 64 {
+        while n >= 29 {
             let mut t = 0;
-            for i in 0..4 {
-                core::mem::swap(&mut t, &mut value[4 - i - 1]);
+            for i in 0..9 {
+                core::mem::swap(&mut t, &mut self.0[9 - i - 1]);
             }
-            n -= 64;
+            n -= 29;
         }
 
         if n > 0 {
             let mut t = 0;
             #[allow(unused)]
-            for i in 0..4 {
-                let a = &mut value[4 - i - 1];
-                let t2 = *a << (64 - n);
+            for i in 0..9 {
+                let a = &mut self.0[9 - i - 1];
+                let t2 = (*a << (29 - n) & MASK);
+                // let t2 = *a << (29 - n);
                 *a >>= n;
                 *a |= t;
                 t = t2;
             }
         }
-
-        *self = Self::from_64x4(value)
     }
 
     #[inline]
@@ -226,12 +223,10 @@ impl BigInteger for BigInteger256 {
         let mut res: [u64; 4] = <[u64; 4]>::default();
         let mut acc: u64 = 0;
 
-        let mut bits = bits.to_vec();
-        bits.reverse();
-        for (i, bits64) in bits.chunks(64).enumerate() {
-            for bit in bits64.iter().rev() {
+        for (i, bits64) in bits.rchunks(64).enumerate() {
+            for bit in bits64.iter() {
                 acc <<= 1;
-                acc += *bit as u64;
+                acc |= *bit as u64;
             }
             res[i] = acc;
             acc = 0;
@@ -243,11 +238,10 @@ impl BigInteger for BigInteger256 {
         let mut res: [u64; 4] = <[u64; 4]>::default();
         let mut acc: u64 = 0;
 
-        let bits = bits.to_vec();
         for (i, bits64) in bits.chunks(64).enumerate() {
             for bit in bits64.iter().rev() {
                 acc <<= 1;
-                acc += *bit as u64;
+                acc |= *bit as u64;
             }
             res[i] = acc;
             acc = 0;

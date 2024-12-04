@@ -33,7 +33,7 @@ impl<C: Fp256Parameters> core::convert::TryFrom<BigInteger256> for Fp256<C> {
 }
 
 const SHIFT: u32 = 29;
-const MASK: u32 = (1 << SHIFT) - 1;
+pub const MASK: u32 = (1 << SHIFT) - 1;
 
 const SHIFT64: u64 = SHIFT as u64;
 const MASK64: u64 = MASK as u64;
