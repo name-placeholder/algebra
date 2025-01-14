@@ -24,6 +24,7 @@ use zeroize::Zeroize;
 #[macro_use]
 pub mod macros;
 pub mod utils;
+pub mod inverse;
 
 #[macro_use]
 pub mod arithmetic;
