@@ -24,6 +24,7 @@ use zeroize::Zeroize;
 #[macro_use]
 pub mod macros;
 pub mod utils;
+pub mod inverse;
 
 #[macro_use]
 pub mod arithmetic;
@@ -123,7 +124,7 @@ pub trait Field:
 
     /// Returns the characteristic of the field,
     /// in little-endian representation.
-    fn characteristic() -> &'static [u64] {
+    fn characteristic() -> [u64; 4] {
         Self::BasePrimeField::characteristic()
     }
 
@@ -547,19 +548,22 @@ impl<Slice: AsRef<[u64]>> Iterator for BitIteratorLE<Slice> {
     }
 }
 
-use crate::biginteger::{
-    BigInteger256, BigInteger320, BigInteger384, BigInteger448, BigInteger64, BigInteger768,
-    BigInteger832,
-};
 use num_bigint::BigUint;
 
-impl_field_bigint_conv!(Fp64, BigInteger64, Fp64Parameters);
-impl_field_bigint_conv!(Fp256, BigInteger256, Fp256Parameters);
-impl_field_bigint_conv!(Fp320, BigInteger320, Fp320Parameters);
-impl_field_bigint_conv!(Fp384, BigInteger384, Fp384Parameters);
-impl_field_bigint_conv!(Fp448, BigInteger448, Fp448Parameters);
-impl_field_bigint_conv!(Fp768, BigInteger768, Fp768Parameters);
-impl_field_bigint_conv!(Fp832, BigInteger832, Fp832Parameters);
+pub mod impl_conv {
+    use super::*;
+    use crate::biginteger::native_bigint::BigInteger256;
+    use crate::native_fp256::{Fp256, Fp256Parameters};
+
+    impl_field_bigint_conv!(Fp256, BigInteger256, Fp256Parameters);
+}
+
+// impl_field_bigint_conv!(Fp64, BigInteger64, Fp64Parameters);
+// impl_field_bigint_conv!(Fp320, BigInteger320, Fp320Parameters);
+// impl_field_bigint_conv!(Fp384, BigInteger384, Fp384Parameters);
+// impl_field_bigint_conv!(Fp448, BigInteger448, Fp448Parameters);
+// impl_field_bigint_conv!(Fp768, BigInteger768, Fp768Parameters);
+// impl_field_bigint_conv!(Fp832, BigInteger832, Fp832Parameters);
 
 // Given a vector of field elements {v_i}, compute the vector {v_i^(-1)}
 pub fn batch_inversion<F: Field>(v: &mut [F]) {
